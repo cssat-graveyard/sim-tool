@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/17/2015
-# Date updated:
+# Date updated: 3/20/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -56,7 +56,7 @@ set.seed = NULL
 number_predictors <- 4
 number_outcomes <- 3
 
-# estimate MNL using the nnet library
+# fit a multinomial log-linear model via via neural networks
 mlogit.result <- multinom(food ~ size + female + teeth, Hess=TRUE)
 
 # get the point estimates out of the result
@@ -89,7 +89,6 @@ simbetas <- mvrnorm(sims, pe, vc)
 simb <- array(NA, dim = c(sims, number_predictors, number_outcomes - 1))  
 index_starts <- seq(from = 1, to = number_predictors * (number_outcomes - 1), by = number_predictors)
 for(i in 1:(number_outcomes - 1)) {
-    
     simb[, , i] <- simbetas[, index_starts[i]:(index_starts[i] + number_predictors - 1)]
 }
 
