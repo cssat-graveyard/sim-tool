@@ -85,7 +85,7 @@ set.seed = NULL
 gator <- data.frame(food, size, sex = female, teeth)
 gator$food <- factor(gator$food, 
                      levels = c(1, 2, 3), 
-                     labels = c("invertebrates", "fish", "other"))
+                     labels = c("reunification", "adoption", "guardianship"))
 gator$sex <- factor(gator$sex, 
                     levels = c(0, 1), 
                     labels = c("male", "female"))
