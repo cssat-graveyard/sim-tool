@@ -89,6 +89,9 @@ gator$sex <- factor(gator$sex,
                     levels = c(0, 1), 
                     labels = c("male", "female"))
 
+# quick clean-up of the no longer needed data objects
+rm(female, food, set.seed, size, teeth)
+
 # multinom: "fit a multinomial log-linear model via neural networks"
 gator_logit <- multinom(food ~ size + sex + teeth, 
                         data = gator, Hess=TRUE)
@@ -202,7 +205,8 @@ get_new_data <- function(dataset, model_object,
     if(length(predictor_names) > ncol(counterfactuals)) {
         # drop out the x-axis and (if used) facet variables...
         if(!is.null(facet_variable)) {
-            retained_index <- !grepl(paste(x_axis_variable, facet_variable, sep = "|"), predictor_names)
+            retained_index <- !grepl(paste(x_axis_variable, facet_variable, sep = "|"), 
+                                     predictor_names)
         } else {
             retained_index <- !grepl(x_axis_variable, predictor_names)
         }
