@@ -128,9 +128,9 @@ mlogit.qoi2 <- mlogitsimev(xhyp2,simb,ci=0.67)
 
 # the mlogit structure is a collection of arrays but ggplot wants dataframes...
 # extracting the arrays as matrices and binding them together
-tidy_sim <- rbind(matrix(mlogit.qoi1$lower, ncol = 3),
-                  matrix(mlogit.qoi1$upper, ncol = 3),
-                  matrix(mlogit.qoi1$pe, ncol = 3)
+tidy_sim <- rbind(matrix(predictions1$lower, ncol = 3),
+                  matrix(predictions1$upper, ncol = 3),
+                  matrix(predictions1$pe, ncol = 3)
 )
 
 # now formatting the resulting collection into a dataframe that fits our
@@ -141,15 +141,13 @@ tidy_sim <- data.frame(tidy_sim)
 names(tidy_sim) <- c("invertebrates", "fish", "other")
 # adding factors to identify key features of the data - these may seem 
 # arbitrary (sorry!) but are intuited from the example itself
-tidy_sim$measure_type <- rep(c("lower", "upper", "pe"), each = 10602)
-tidy_sim$size <- rep(sizerange)
-tidy_sim$sex <- rep(c("male", "female"), each = 31)
-tidy_sim$teeth <- rep(teethrange, each = 62)
+tidy_sim$measure_type <- rep(c("lower", "upper", "pe"), each = nrow(predictions1$upper))
+tidy_sim$size <- rep(nd1$size)
 # collapsing and spreading variables to make visualizing easy - this is
 # a bit arbitrary (convenient for how Brian uses ggplot)
 tidy_sim <- gather(tidy_sim, food, measure, invertebrates, fish, other)
 #tidy_sim$row <- nrow(tidy_sim)
-tidy_sim <- spread(tidy_sim, measure_type, measure)
+spread(tidy_sim, measure_type, measure)
 
 # plot
 ggplot(tidy_sim, aes(x = size, y = pe, 
@@ -158,7 +156,6 @@ ggplot(tidy_sim, aes(x = size, y = pe,
     geom_line() +
     # takes the ymin and ymax and draws a ribbon around the lines
     geom_ribbon(alpha = 0.5, aes(fill = food)) + 
-    facet_wrap(~sex) +
     theme_bw() +
     xlab("Length of Gator (Meters)") +
     ylab("p(Primary Food Type Is ... | Length)")

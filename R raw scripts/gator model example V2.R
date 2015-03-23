@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/20/2015
-# Date updated: 3/20/2015
+# Date updated: 3/23/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -39,14 +39,15 @@
 #   - only useful for the prototype itself (will provide model prebuilt 
 #     for the final product)
 #
-# - FUNCTION TO GENERATE OUTCOME PREDICTIONS FOR GIVEN MODEL OBJECT
+# - FUNCTIONs TO GENERATE OUTCOME PREDICTIONS FOR GIVEN MODEL OBJECT
 #   - extract point estimates from the model object
 #   - solve for the covariance matrix
 #   - get coefficient estimates via simulation
 #   - generate data to feed to coefficient estimates
 #   - get the outcome predictions (feed the estimates!)
 #
-# - FUNCTION TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
+# - FUNCTIONs TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
+#   - 
 #
 # - WRAPPER FUNCTION FOR SIMULATION AND VISUALIZATION
 #   - make sure inputs are sensible (model object, original data to get ranges,
@@ -101,7 +102,7 @@ int_logit <- multinom(food ~ size + sex + teeth + size * teeth,
                       data = gator, Hess=TRUE)
 
 ###############################################################################
-## FUNCTION TO GENERATE OUTCOME PREDICTIONS FOR GIVEN MODEL OBJECT
+## FUNCTIONs TO GENERATE OUTCOME PREDICTIONS FOR GIVEN MODEL OBJECT
 #   - extract point estimates from the model object
 #   - solve for the covariance matrix
 #   - get coefficient estimates via simulation
@@ -188,8 +189,9 @@ get_new_data <- function(dataset, model_object,
     if(!is.null(facet_variable)) {
         # if a facet variable has been set, we expand the counterfactuals
         # to include all x-axis variable/facet variable combinations
+        # NOTE: also have to force the factor to numeric for mlogitsimev
         counterfactuals <- expand.grid(counterfactuals, 
-                                       unique(dataset[facet_variable])
+                                       as.numeric(unique(dataset[[facet_variable]]))
         )
         names(counterfactuals) <- c(x_axis_variable, facet_variable)
     } else {
@@ -231,7 +233,109 @@ get_new_data <- function(dataset, model_object,
     return(counterfactuals)
 }
 
+# simulate expected probabilities using the new data and the coefficients
+# NO NEW FUNCTION NEEDED - THIS IS HANDLED BY mlogitsimev
 
 ###############################################################################
-## END OF SCRIPT
+## FUNCTIONs TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
+
+visualize_predictions <- function(prediction_object, model_object, 
+                                  counterfactuals,
+                                  x_axis_variable, facet_variable = NULL,
+                                  x_lab = "Predictor", y_lab = "p(Outcome)") {
+    # the mlogit structure is a collection of arrays but ggplot wants dataframes
+    # first we extract the arrays as matrices and bind them together
+    num_col <- ncol(prediction_object$lower)
+    tidy_sim <- rbind(matrix(prediction_object$lower, ncol = num_col),
+                      matrix(prediction_object$upper, ncol = num_col),
+                      matrix(prediction_object$pe, ncol = num_col)
+    )
+    
+    # then we format the resulting collection to be properly grouped and
+    # labelled for visualizing
+    tidy_sim <- data.frame(tidy_sim)
+    # the outcome names are retained in the model object - we take these and
+    # label our prediction dataframe columns accordingly
+    names(tidy_sim) <- model_object$lab
+    # add a grouping variable for the three types of measures we get from
+    # the prediction object
+    tidy_sim$measure_type <- rep(c("lower", "upper", "pe"), 
+                                 each = nrow(prediction_object$upper))
+    # we also add the predictor (x-axis) value that will link the unique sets
+    # (lower, upper, pe) - this should naturally repeat to the appropriate
+    # length
+    tidy_sim$predictor <- rep(counterfactuals[[x_axis_variable]])
+    # finally, if there is a facet variable set, we also add it as a grouping 
+    # variable
+    if(!is.null(facet_variable)) {
+        # factors are also stored in the model object, so we extract
+        # from there again
+        factor_levels <- model_object$xlevels[[facet_variable]]
+        # the number of repitions of the factor is determined by the length
+        # of the x_axis variable / number of unique factor levels
+        num_reps <- nrow(prediction_object$upper) / length(factor_levels)
+        # finally add the grouping variable
+        tidy_sim$facet <- rep(factor_levels, each = num_reps)
+    }
+    print(tidy_sim)
+    
+    # collapsing and spreading variables to make visualizing easy
+    # (this is a tad arbitrary - it is consisent with Brian's interpretation of
+    # good ggplot practice)
+    if(!is.null(facet_variable)) {
+        # if a facet variable is set, respect it...
+        tidy_sim <- gather(tidy_sim, outcome, likelihood, -measure_type, 
+                           -predictor, -facet)    
+    } else {
+        # otherwise don't because it's not there
+        tidy_sim <- gather(tidy_sim, outcome, likelihood, -measure_type, 
+                           -predictor)
+    }
+    tidy_sim <- spread(tidy_sim, measure_type, likelihood)
+    
+    # built the plot object
+    plot_object <- ggplot(tidy_sim, aes(x = predictor, y = pe, 
+                                        group = outcome, 
+                                        ymin = lower, ymax = upper)) + 
+        geom_line() +
+        # takes the ymin and ymax and draws a ribbon around the lines
+        geom_ribbon(alpha = 0.5, aes(fill = outcome)) + 
+        theme_bw() +
+        xlab(x_lab) +
+        ylab(y_lab)
+    
+    # if a facet variable is set, add the facet layer to the plot object
+    if(!is.null(facet_variable)) {
+        plot_object <- plot_object + facet_wrap(~ facet)
+    }
+    
+    # return the plot object
+    return(plot_object)
+}
+
+###############################################################################
+## TEST WRAPPER (likely cannot use this with Shiny or it will re-run
+## the entire function each time an input is changed - NEED TO VERIFY THIS)
+
+test_wrapper <- function(dataset, model_object, 
+                         x_axis_variable, facet_variable = NULL,
+                         coeff_sample_size = 1000) {
+    # create the supporting objects
+    pe <- get_point_estimates(model_object)
+    cvm <- get_covariance_matrix(model_object)
+    ce <- get_coefficient_estimates(coeff_sample_size, pe, cvm, 
+                                    length(model_object$lab))
+    nd <- get_new_data(dataset, model_object, 
+                       x_axis_variable, facet_variable = facet_variable)
+    
+    # generate the predictions
+    prediction_object <- mlogitsimev(nd, ce, ci = 0.67)
+    
+    # generate the plot object
+    plot_object <- visualize_predictions(prediction_object, model_object, 
+                                         nd, x_axis_variable, facet_variable)
+    # return the plot object
+    return(plot_object)
+}
+
 ###############################################################################
