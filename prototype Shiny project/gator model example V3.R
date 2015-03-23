@@ -145,13 +145,16 @@ get_covariance_matrix <- function(model_object) {
 get_coefficient_estimates <- function(sample_size, 
                                       point_estimates, 
                                       covariance_matrix,
-                                      number_outcomes) {
+                                      model_object) {
     # draw parameters, using MASS::mvrnorm
     sim_betas <- mvrnorm(sample_size, point_estimates, covariance_matrix)
     
     # data needs to be re-arranged into an array format
     # first determine array dimensions...
-    number_arrays  <- number_outcomes - 1
+    # looks crazy, but we're essentially taking all the UNIQUE variables in
+    # the model formula then subtract 1 for the outcome variable and 1 for the
+    # reference variable
+    number_arrays  <- length(all.vars(model_object$call[[2]])) - 2
     number_columns <- length(point_estimates)/number_arrays
     number_rows    <- sample_size
     
@@ -300,6 +303,7 @@ visualize_predictions <- function(prediction_object, model_object,
         geom_line() +
         # takes the ymin and ymax and draws a ribbon around the lines
         geom_ribbon(alpha = 0.5, aes(fill = outcome)) + 
+        scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
         theme_bw() +
         xlab(x_lab) +
         ylab(y_lab)

@@ -20,11 +20,31 @@
 ###############################################################################
 ## STEP
 
-shinyUI(navbarPage("SimTool Prototypes",
-                   tabPanel("Gator Facetting Demo",
-                            
-                   )
-)
+shinyUI(fluidPage(
+    titlePanel("SimTool Demo"),
+    
+    sidebarLayout(
+        sidebarPanel(
+            helpText("Adjust predictors to explore how likelihoods change."),
+            
+            radioButtons("facet_choice", 
+                         label = h3("Facet Choice"),
+                         choices = list("None", "Sex"),
+                         selected = "None"),
+            
+            selectInput("predictor_choice", label = h3("Select X-Axis"), 
+                        choices = list("Age", "Income"), selected = "Age"),
+            
+            sliderInput("range", 
+                        label = "Example range (NOT FUNCTIONAL):",
+                        min = 0, max = 100, value = c(0, 100))
+        ),
+        
+        mainPanel(
+            plotOutput("demo_plot")
+        )
+    )
+))
 
 ###############################################################################
 ## END OF SCRIPT

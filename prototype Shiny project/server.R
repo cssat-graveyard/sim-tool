@@ -31,52 +31,33 @@
 ###############################################################################
 ## SOURCE GATOR MODEL CURRENT DRAFT
 
-source("gator model example V2.R")
+source("gator model example V3.R")
+
+point_estimates <- get_point_estimates(gator_logit)
+cov_matrix <- get_covariance_matrix(gator_logit)
+coeff_estimates <- get_coefficient_estimates(1000, point_estimates, 
+                                             cov_matrix, gator_logit)
 
 ###############################################################################
 ## DEFINE THE OBJECTS FOR THE UI TO DISPLAY
 
 shinyServer(function(input, output) {
-    output$demo1 <- renderPlot({
-        demographics[[1]]
-    })
-    
-    output$demo2 <- renderTable({
-        demographics[[2]]
-    })
-    
-    output$demo3 <- renderPlot({
-        demographics[[3]]
-    })
-    
-    output$demo4 <- renderTable({
-        demographics[[4]]
-    })
-    
-    output$demo5 <- renderPlot({
-        demographics[[5]]
-    })
-    
-    output$demo6 <- renderTable({
-        demographics[[6]]
-    })
-    
-    output$perf1 <- renderPlot({
-        performance[[1]]
-    })
-    
-    output$perf2 <- renderTable({
-        performance[[2]]
-    })
-    
-    output$perf3 <- renderPlot({
-        performance[[3]]
-    })
-    
-    output$perf4 <- renderTable({
-        performance[[4]]
+    output$demo_plot <- renderPlot({
+        facet_selected <- switch(input$facet_choice,
+                                 "None" = NULL,
+                                 "Sex" = "sex")
+        
+        x_label <- input$predictor_choice
+        
+        new_data <- get_new_data(gator, gator_logit, "size", facet_variable = facet_selected)
+        prediction_object <- mlogitsimev(new_data, coeff_estimates, ci = 0.67)
+        visualize_predictions(prediction_object, gator_logit, 
+                              new_data, "size", facet_variable = facet_selected,
+                              y_lab = "Probability", x_lab = x_label)
     })
 })
+
+
 
 ###############################################################################
 ## END OF SCRIPT
