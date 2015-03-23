@@ -43,16 +43,20 @@ coeff_estimates <- get_coefficient_estimates(1000, point_estimates,
 
 shinyServer(function(input, output) {
     output$demo_plot <- renderPlot({
+        x_axis_selected <- switch(input$predictor_choice,
+                                  "Age" = "size",
+                                  "Income" = "teeth")
+        
         facet_selected <- switch(input$facet_choice,
                                  "None" = NULL,
                                  "Sex" = "sex")
         
         x_label <- input$predictor_choice
         
-        new_data <- get_new_data(gator, gator_logit, "size", facet_variable = facet_selected)
+        new_data <- get_new_data(gator, gator_logit, x_axis_selected, facet_variable = facet_selected)
         prediction_object <- mlogitsimev(new_data, coeff_estimates, ci = 0.67)
         visualize_predictions(prediction_object, gator_logit, 
-                              new_data, "size", facet_variable = facet_selected,
+                              new_data, x_axis_selected, facet_variable = facet_selected,
                               y_lab = "Probability", x_lab = x_label)
     })
 })
