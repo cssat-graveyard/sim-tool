@@ -17,26 +17,31 @@
 #       named below).
 
 # sketch of script
-# - source the current draft of the "gator model example" script
-#       - this loads an example dataset and model along with all the functions
-#         needed to get simulated likelihood predictions from the model and
-#         to visualize these predictions in a ribbon plot
+# - source the model script and sim/vis functions script
+#   - select the desired model 
+#   - extract the dataframe object from it
 #
-# - build the necessary data objects from the given dataset and model
-#       - 
+# - build any static objects needed for simulation/visualization
 #
 # - define the shinyServer loop to turn the data objects into Shiny's output
 #   objects (and define any desired interactivty)
 
 ###############################################################################
-## SOURCE GATOR MODEL CURRENT DRAFT
+## SOURCE THE MODEL AND SIM/VIS SCRIPTS
 
-source("gator model example V3.R")
+source("COS test models.R")
+source("COS sim and vis functions.R")
 
-point_estimates <- get_point_estimates(gator_logit)
-cov_matrix <- get_covariance_matrix(gator_logit)
+selected_model <- add_logit
+model_data <- model.frame(selected_model)
+
+###############################################################################
+## STATIC OBJECTS FOR SIMULATION/VISUALIZATION
+
+point_estimates <- get_point_estimates(selected_model)
+cov_matrix <- get_covariance_matrix(selected_model)
 coeff_estimates <- get_coefficient_estimates(1000, point_estimates, 
-                                             cov_matrix, gator_logit)
+                                             cov_matrix, selected_model)
 
 ###############################################################################
 ## DEFINE THE OBJECTS FOR THE UI TO DISPLAY
@@ -44,8 +49,9 @@ coeff_estimates <- get_coefficient_estimates(1000, point_estimates,
 shinyServer(function(input, output) {
     output$demo_plot <- renderPlot({
         x_axis_selected <- switch(input$predictor_choice,
-                                  "Age" = "size",
-                                  "Income" = "teeth")
+                                  "Age" = "age",
+                                  "Income" = "income",
+                                  "IQ" = "iq")
         
         facet_selected <- switch(input$facet_choice,
                                  "None" = NULL,
@@ -53,10 +59,16 @@ shinyServer(function(input, output) {
         
         x_label <- input$predictor_choice
         
-        new_data <- get_new_data(gator, gator_logit, x_axis_selected, facet_variable = facet_selected)
+        new_data <- get_new_data(model_data, 
+                                 selected_model, 
+                                 x_axis_selected, 
+                                 facet_variable = facet_selected)
         prediction_object <- mlogitsimev(new_data, coeff_estimates, ci = 0.67)
-        visualize_predictions(prediction_object, gator_logit, 
-                              new_data, x_axis_selected, facet_variable = facet_selected,
+        visualize_predictions(prediction_object, 
+                              selected_model, 
+                              new_data, 
+                              x_axis_selected, 
+                              facet_variable = facet_selected,
                               y_lab = "Probability", x_lab = x_label)
     })
 })

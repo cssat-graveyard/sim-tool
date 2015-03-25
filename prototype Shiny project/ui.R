@@ -33,7 +33,8 @@ shinyUI(fluidPage(
                          selected = "None"),
             
             selectInput("predictor_choice", label = h3("Select X-Axis"), 
-                        choices = list("Age", "Income"), selected = "Age"),
+                        choices = list("Age", "Income", "IQ"), 
+                        selected = "Age"),
             
             sliderInput("range", 
                         label = "Example range (NOT FUNCTIONAL):",
