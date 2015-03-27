@@ -36,9 +36,9 @@ shinyUI(fluidPage(
                         choices = list("Age", "Income", "IQ"), 
                         selected = "Age"),
             
-            sliderInput("range", 
-                        label = "Example range (NOT FUNCTIONAL):",
-                        min = 0, max = 100, value = c(0, 100))
+            sliderInput("ci", 
+                        label = "Confidence Interval",
+                        min = 0, max = 100, value = 95)
         ),
         
         mainPanel(

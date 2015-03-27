@@ -46,13 +46,15 @@
 # sketch of script
 # - LOAD SUPPORTING LIBRARIES
 #
-# - LOAD EXAMPLE DATA AND GET MODEL OBJECT
-#   - only useful for the prototype itself (will provide model prebuilt 
-#     for the final product)
+# - LOAD SOURCE DATASET
+#   - tidy, properly formatted and labelled dataset to fit the multinom model to
 #
-# - FUNCTIONs TO GENERATE OUTCOME PREDICTIONS FOR GIVEN MODEL OBJECT
+# - FUNCTIONS TO GENERATE OUTCOME PREDICTIONS
+#   - create an expanded version of the source dataset (using same model as
+#     will be used in the multinom fitting)
+#   - fit the multinom model
 #   - extract point estimates from the model object
-#   - solve for the covariance matrix
+#   - solve the model object Hessian matrix for the covariance matrix
 #   - get coefficient estimates via simulation
 #   - generate data to feed to coefficient estimates
 #   - get the outcome predictions (feed the estimates!)
@@ -73,16 +75,26 @@
 library(nnet)       # supports interactions with the multinomial logit object
 library(MASS)       # allows for multivariate sampling
 library(simcf)      # creates counterfactual sets
+library(dplyr)      # serves various formatting needs
 library(tidyr)      # for reformatting data for visualization
 library(ggplot2)    # for visualizing the data
 
 ###############################################################################
 ## FUNCTIONs TO GENERATE OUTCOME PREDICTIONS FOR GIVEN MODEL OBJECT
+#   - create an expanded version of the source dataset (using same model as
+#     will be used in the multinom fitting)
+#   - fit the multinom model
 #   - extract point estimates from the model object
-#   - solve for the covariance matrix
+#   - solve the model object Hessian matrix for the covariance matrix
 #   - get coefficient estimates via simulation
 #   - generate data to feed to coefficient estimates
 #   - get the outcome predictions (feed the estimates!)
+
+# create an expanded version of the source dataset
+# simply use model.matrix(formula, dataset)
+
+# fit the multinom model
+# simply use multinom(formula, dataset, Hess = T)
 
 # function to extract non-reference point estimates from the model object
 get_point_estimates <- function(model_object) {
@@ -151,15 +163,15 @@ get_coefficient_estimates <- function(sample_size,
 }
 
 # generate data to feed the coefficient estimates
-get_new_data <- function(dataset, model_object,
+get_new_data <- function(exp_data, base_data, model_object,
                          x_axis_variable, x_range = NULL, x_range_density = 100,
                          facet_variable = NULL) {
     # check if an explicit range has been provided for the x-axis variable
     if(is.null(x_range)) {
         # if not provided, calculate the range from the dataset
         # floor and ceiling used to insure some space around the observed data
-        x_range[1] <- floor(min(dataset[x_axis_variable]))
-        x_range[2] <- ceiling(max(dataset[x_axis_variable]))
+        x_range[1] <- floor(min(exp_data[x_axis_variable]))
+        x_range[2] <- ceiling(max(exp_data[x_axis_variable]))
     }
     
     # initialize the minimum set of counterfactuals (the x-axis variable cuts)
@@ -169,18 +181,45 @@ get_new_data <- function(dataset, model_object,
     if(!is.null(facet_variable)) {
         # if a facet variable has been set, we expand the counterfactuals
         # to include all x-axis variable/facet variable combinations
-        # NOTE: also have to force the factor to numeric for mlogitsimev
-        counterfactuals <- expand.grid(counterfactuals, 
-                                       as.numeric(unique(dataset[[facet_variable]]))
+        # first we get the levels from original dataset
+        var_levels <- with(base_data, levels(get(facet_variable)))
+        # get all combinations of the factor name combined with the level name  
+        # (in the order that the levels are set)
+        factor_var_combinations <- paste0(facet_variable, var_levels)
+        # expand the counterfactual set to include appropriate combinations of the
+        # factor/level columns - all having range(0, 1, 1)
+        # first treat the initial counterfactual set explicitly as the x_axis
+        # cuts
+        x_axis_cuts <- counterfactuals
+        # then create the long, factor format of all x_axis/factor combos
+        # NOTE: sorts the facet_var column which messes up variable order
+        counterfactuals <- data.frame(x_axis_cuts, facet_var = 
+                                          rep(factor_var_combinations, 
+                                              each = length(x_axis_cuts))
         )
-        names(counterfactuals) <- c(x_axis_variable, facet_variable)
+        # create the wide format (x_axis_cuts column gets dropped)
+        counterfactuals <- spread(counterfactuals, facet_var, x_axis_cuts)
+        # correct the variable order
+        counterfactuals <- counterfactuals[factor_var_combinations]
+        # convert the results to 0s and 1s
+        counterfactuals <- ifelse(is.na(counterfactuals), 0, 1)
+        # drop the reference level
+        counterfactuals <- counterfactuals[, -1]
+        # add the x_axis_cuts back in as the first column
+        counterfactuals <- data.frame(rep(x_axis_cuts), counterfactuals)
+        # label the x_axis_cuts column properly
+        names(counterfactuals)[1] <- x_axis_variable
     } else {
+        # if no facet variable, simply expand the counterfactual vector to a
+        # one-column dataframe and label the column properly
         counterfactuals <- expand.grid(counterfactuals)
         names(counterfactuals) <- x_axis_variable
     }
-    
     # finally, we check if there are additional predictors...
-    variable_names <- all.vars(model_object$call[[2]])
+    # (the "formula" call ensures we get the actual formula object rather
+    # than a reference to the object)
+    exp_formula <- formula(model_object$call[[2]])
+    variable_names <- all.vars(exp_formula)
     predictor_names <- variable_names[2:length(variable_names)]
     # by comparing the total number of predictors against the number of columns
     # in the counterfactual table...
@@ -198,7 +237,7 @@ get_new_data <- function(dataset, model_object,
         # now we get the means for the fixed predictors...
         mean_set <- NULL
         for(i in 1:length(extra_predictors)) {
-            mean_set[i] <- mean(as.numeric(dataset[, extra_predictors[i]]), 
+            mean_set[i] <- mean(as.numeric(exp_data[, extra_predictors[i]]), 
                                 na.rm = T)
         }
         # and attach those means to the current counterfactual set
@@ -211,7 +250,7 @@ get_new_data <- function(dataset, model_object,
     
     # now we quickly reorder our new data object so that the columns match
     # the order of our simulated coefficients objects
-    counterfactuals <- counterfactuals[all.vars(model_object$call[[2]][2:length(model_object$call[[2]])])]
+    counterfactuals <- counterfactuals[all.vars(exp_formula)[2:length(all.vars(exp_formula))]]
     
     # we wrap up by returning the counterfactual set
     return(counterfactuals)
@@ -223,7 +262,8 @@ get_new_data <- function(dataset, model_object,
 ###############################################################################
 ## FUNCTIONs TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
 
-visualize_predictions <- function(prediction_object, model_object, 
+visualize_predictions <- function(prediction_object, model_object,
+                                  base_data,
                                   counterfactuals,
                                   x_axis_variable, facet_variable = NULL,
                                   x_lab = "Predictor", y_lab = "p(Outcome)") {
@@ -250,18 +290,17 @@ visualize_predictions <- function(prediction_object, model_object,
     # length
     tidy_sim$predictor <- rep(counterfactuals[[x_axis_variable]])
     # finally, if there is a facet variable set, we also add it as a grouping 
-    # variable
+    # variable (create a new summary variable rather than deal with the 
+    # already existing columns)
     if(!is.null(facet_variable)) {
-        # factors are also stored in the model object, so we extract
-        # from there again
-        factor_levels <- model_object$xlevels[[facet_variable]]
+        # we get the levels from the original data object
+        factor_levels <- with(base_data, levels(get(facet_variable)))
         # the number of repitions of the factor is determined by the length
         # of the x_axis variable / number of unique factor levels
         num_reps <- nrow(prediction_object$upper) / length(factor_levels)
         # finally add the grouping variable
         tidy_sim$facet <- rep(factor_levels, each = num_reps)
-    }
-    print(tidy_sim)
+    }    
     
     # collapsing and spreading variables to make visualizing easy
     # (this is a tad arbitrary - it is consisent with Brian's interpretation of
@@ -291,7 +330,7 @@ visualize_predictions <- function(prediction_object, model_object,
     
     # if a facet variable is set, add the facet layer to the plot object
     if(!is.null(facet_variable)) {
-        plot_object <- plot_object + facet_wrap(~ facet)
+        plot_object <- plot_object + facet_wrap(~ facet, ncol = 2)
     }
     
     # return the plot object

@@ -34,6 +34,10 @@
 # - EXPAND AND FORMAT THE DATA TO MEET DEVELOPMENT NEEDS
 #   - we want more predictors than provided in the original example
 #   - we also want to work with a properly formatted data frame
+#   - finally, we need to "spread" the factors in a second data frame so they 
+#     are handled properly when there are more than two levels
+#   - the first data frame is retained for factor/level information, the second
+#     is the data frame we will use for the model fitting and simulation
 #
 # - FIT THE MODELS
 #   - model objects of varying complexity selected to test robustness
@@ -65,6 +69,9 @@ age <- size
 sex <- female
 rm(food, size, female)
 
+# adjust the sex predictor to have a third level
+sex[sample(1:length(sex), 6, replace = F)] <- 2
+
 # create new continuous predictors
 # first a fake income relationship
 income <- rnorm(outcome, mean = outcome, sd = 1)
@@ -74,27 +81,27 @@ iq <- rnorm(age, mean = age, sd = 10)
 iq <- abs(iq) * 5
 
 # gather into a properly formatted dataframe
-test_data <- data.frame(outcome, sex, age, income, iq)
-test_data$outcome <- factor(test_data$outcome, 
+base_data <- data.frame(outcome, sex, age, income, iq)
+base_data$outcome <- factor(base_data$outcome, 
                             levels = c(1, 2, 3), 
                             labels = c("reunification", 
                                        "adoption", 
                                        "guardianship")
                             )
-test_data$sex <- factor(test_data$sex, 
-                        levels = c(0, 1), 
-                        labels = c("male", "female"))
+base_data$sex <- factor(base_data$sex, 
+                        levels = c(0, 1, 2), 
+                        labels = c("male", "female", "asexual"))
 
 # quick clean-up of the no longer needed data objects
 rm(age, income, iq, outcome, sex)
 
 # multinom: "fit a multinomial log-linear model via neural networks"
-add_logit <- multinom(outcome ~ sex + age + income + iq, 
-                        data = test_data, Hess=TRUE)
+#add_logit <- multinom(outcome ~ sex + age + income + iq, 
+#                        data = base_data, Hess=TRUE)
 
 # alternate test model with an interaction term
-int_logit <- multinom(outcome ~ sex + age + income + iq + age * iq, 
-                      data = test_data, Hess=TRUE)
+#int_logit <- multinom(outcome ~ sex + age + income + iq + age * iq, 
+#                      data = base_data, Hess=TRUE)
 
 ###############################################################################
 ## END OF SCRIPT
