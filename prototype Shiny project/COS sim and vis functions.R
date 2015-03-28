@@ -220,19 +220,30 @@ get_new_data <- function(exp_data, base_data, model_object,
     # than a reference to the object)
     exp_formula <- formula(model_object$call[[2]])
     variable_names <- all.vars(exp_formula)
-    predictor_names <- variable_names[2:length(variable_names)]
-    # by comparing the total number of predictors against the number of columns
+    predictor_names <- variable_names[-1]   # drop off the outcome variable
+    # we compare the total number of predictors against the number of columns
     # in the counterfactual table...
     if(length(predictor_names) > ncol(counterfactuals)) {
-        # drop out the x-axis and (if used) facet variables...
+        # if there are predictors not yet represented in the counterfactual set
+        # we define a regex search term that will match the x-axis and (if used)
+        # facet variables and we drop ALL partial and complete matches
+        # (getting rid of any interaction terms as well)
         if(!is.null(facet_variable)) {
-            retained_index <- !grepl(paste(x_axis_variable, facet_variable, sep = "|"), 
+            retained_index <- !grepl(paste(x_axis_variable, 
+                                           facet_variable, 
+                                           sep = "|"), 
                                      predictor_names)
         } else {
-            retained_index <- !grepl(x_axis_variable, predictor_names)
+            retained_index <- !grepl(x_axis_variable, 
+                                     predictor_names)
         }
-        # and gather the "fixed" predictors
+        # we drop all the matches, leaving just the (non-interaction) 
+        # predictors that we need to fix to a single value
         extra_predictors <- predictor_names[retained_index]
+        # we quickly capture the current number of columns in our 
+        # countefactual table and add one to it (giving us the index
+        # for where we are adding new columns)
+        offset_amount <- ncol(counterfactuals) + 1
         
         # now we get the means for the fixed predictors...
         mean_set <- NULL
@@ -244,8 +255,32 @@ get_new_data <- function(exp_data, base_data, model_object,
         for(i in 1:length(extra_predictors)) {
             counterfactuals <- cbind(counterfactuals, mean_set[i])
         }
-        offset_amount <- length(predictor_names) - length(extra_predictors) + 1
-        names(counterfactuals)[offset_amount:ncol(counterfactuals)] <- extra_predictors
+        names(counterfactuals)[offset_amount:ncol(counterfactuals)] <- 
+            extra_predictors
+    }
+    
+    # now we explore our predictor set for any interaction terms
+    interaction_index <- grepl(".", predictor_names, fixed = T)
+    if(any(interaction_index)) {
+        # if we find them, we pull those terms out
+        interaction_vars <- predictor_names[interaction_index]
+        # create a list with the items in each term split
+        interaction_list <- strsplit(interaction_vars, ".", fixed = T)
+        # we quickly capture the current number of columns in our 
+        # countefactual table and add one to it (giving us the index
+        # for where we are adding new columns)
+        offset_amount2 <- ncol(counterfactuals) + 1
+        # for each split term, we take the matching columns in the 
+        # counterfactual table and multiply them together to create a new
+        # column for the interaction term
+        for(current_set in 1:length(interaction_list)) {
+            matching_cols <- counterfactuals[interaction_list[[current_set]]]
+            new_col <- apply(matching_cols, 1, prod)
+            counterfactuals <- cbind(counterfactuals, new_col)
+        }
+        # we then give our interaction columns their proper names
+        names(counterfactuals)[offset_amount2:ncol(counterfactuals)] <- 
+            interaction_vars
     }
     
     # now we quickly reorder our new data object so that the columns match
