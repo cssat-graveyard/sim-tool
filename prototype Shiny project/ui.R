@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 
+# Date updated: 3/27/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -23,27 +23,51 @@
 shinyUI(fluidPage(
     titlePanel("SimTool Demo"),
     
-    sidebarLayout(
-        sidebarPanel(
-            helpText("Adjust predictors to explore how likelihoods change."),
-            
-            radioButtons("facet_choice", 
-                         label = h3("Facet Choice"),
-                         choices = list("None", "Sex"),
-                         selected = "None"),
-            
-            selectInput("predictor_choice", label = h3("Select X-Axis"), 
-                        choices = list("Age", "Income", "IQ"), 
-                        selected = "Age"),
-            
-            sliderInput("ci", 
-                        label = "Confidence Interval",
-                        min = 0, max = 100, value = 95)
-        ),
-        
-        mainPanel(
-            plotOutput("demo_plot")
-        )
+    column(3,
+           wellPanel(
+               helpText("Adjust predictors to explore how likelihoods change."),
+               
+               radioButtons("predictor_choice", label = h3("Select X-Axis"), 
+                            choices = list("Age", "Income", "IQ"), 
+                            selected = "Age"),
+               
+               radioButtons("facet_choice", 
+                            label = h3("Facet Choice"),
+                            choices = list("None", "Sex"),
+                            selected = "None"),
+               
+               sliderInput("ci", 
+                           label = "Confidence Interval",
+                           min = 0, max = 100, value = 95)
+           ),
+           
+           conditionalPanel(
+               condition = "input.predictor_choice == 'Age'",
+               sliderInput("income_set", label = h3("What income?"),
+                           min = 0, max = 100000, value = 20000),
+               sliderInput("IQ_set", label = h3("What IQ?"),
+                           min = 0, max = 200, value = 100)
+           ),
+           
+           conditionalPanel(
+               condition = "input.predictor_choice == 'Income'",
+               sliderInput("age_set", label = h3("What age?"),
+                           min = 0, max = 17, value = 9),
+               sliderInput("IQ_set", label = h3("What IQ?"),
+                           min = 0, max = 200, value = 100)
+           ),
+           
+           conditionalPanel(
+               condition = "input.predictor_choice == 'IQ'",
+               sliderInput("age_set", label = h3("What age?"),
+                           min = 0, max = 17, value = 9),
+               sliderInput("income_set", label = h3("What income?"),
+                           min = 0, max = 100000, value = 20000)
+           )
+    ),
+    
+    column(9, 
+           plotOutput("demo_plot")
     )
 ))
 

@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/25/2015
-# Date updated: 
+# Date updated: 3/27/2015
 
 # NOTE: Functions were largely developed in the "gator model example V3.R"
 #       script. That script was archived to allow us to seperate the model
@@ -23,7 +23,8 @@
 #         x-axis selection (and facet selection, if present) and combine it with 
 #         reasonable fixed values for other model coefficients
 #       - generate simulated predicted likelihoods for each model outcome by
-#         combining the input combinations with the sampled coefficients
+#         combining the input combinations with the sampled coefficients and
+#         summarizing the results (upper quartile, lower quartile, mean pe)
 #       - create a plot object visualizing the simulated likelihoods along the
 #         given x-axis selection (facetting if appropriate)
 #
@@ -59,8 +60,9 @@
 #   - generate data to feed to coefficient estimates
 #   - get the outcome predictions (feed the estimates!)
 #
-# - FUNCTIONs TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
-#   - 
+# - FUNCTION TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
+#   - rearrange the outcome predictions to interface with ggplot (tidy 
+#     dataframe); visualize with ggplot
 #
 # - WRAPPER FUNCTION FOR SIMULATION AND VISUALIZATION (FOR OFFLINE TESTING)
 #   - simply lets you manually generate plot objects to test app behavior

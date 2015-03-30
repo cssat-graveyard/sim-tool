@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/25/2015
-# Date updated:
+# Date updated: 3/27/2015
 
 # NOTE: The models built here were largely developed in the 
 #       "gator model example V3.R" script. That script was archived to allow us 
@@ -33,15 +33,9 @@
 #
 # - EXPAND AND FORMAT THE DATA TO MEET DEVELOPMENT NEEDS
 #   - we want more predictors than provided in the original example
+#   - we want a more complex factor than provided in the original example
 #   - we also want to work with a properly formatted data frame
-#   - finally, we need to "spread" the factors in a second data frame so they 
-#     are handled properly when there are more than two levels
-#   - the first data frame is retained for factor/level information, the second
-#     is the data frame we will use for the model fitting and simulation
 #
-# - FIT THE MODELS
-#   - model objects of varying complexity selected to test robustness
-#     of the simulation and visualization functions
 
 ###############################################################################
 ## LOAD SUPPORTING LIBRARIES

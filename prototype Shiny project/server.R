@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 
+# Date updated: 3/27/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -22,7 +22,11 @@
 # - build any static objects needed for simulation/visualization
 #   - select the source data
 #   - define the model formula
-#   - create an expanded version of the data
+#   - we need to "spread" the factors and interactions in a second data frame  
+#     so they are handled properly; this also results in an expanded model
+#     formula matchign the "spread" data frame
+#   - the first data frame is retained for factor/level information, the second
+#     is the data frame we will use for the model fitting and simulation
 #   - create all simulation objects except the new data and the visualization
 #
 # - define the shinyServer loop to turn the data objects into Shiny's output
@@ -54,6 +58,7 @@ exp_data <<- data.frame(base_data[outcome_variable],
 exp_data[, "X.Intercept."] <<- NULL
 
 # fit the model to the expanded dataset (using the expanded model)
+# multinom: "fit a multinomial log-linear model via neural networks"
 exp_model <<- multinom(formula(exp_data), data = exp_data, Hess = T)
 
 # get the static simulation/visualization features
