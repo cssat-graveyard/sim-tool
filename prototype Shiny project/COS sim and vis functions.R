@@ -67,6 +67,9 @@
 # - WRAPPER FUNCTION FOR SIMULATION AND VISUALIZATION (FOR OFFLINE TESTING)
 #   - simply lets you manually generate plot objects to test app behavior
 #     "under the hood"
+#
+# - ADDITIONAL HELPER FUNCTIONS (TO CONSOLIDATE CERTAIN SHINY SERVER TASKS)
+#   - generating the slider names, ranges, and starting values
 
 ###############################################################################
 ## LOAD SUPPORTING LIBRARIES
@@ -396,6 +399,44 @@ test_wrapper <- function(dataset, model_object,
                                          nd, x_axis_variable, facet_variable)
     # return the plot object
     return(plot_object)
+}
+
+###############################################################################
+## ADDITIONAL HELPER FUNCTIONS
+
+get_sliders <- function(base_data, outcome_variable, x_axis_selected) {
+    # make index of variables in the base dataset which are NOT factors
+    non_factors <- which(!sapply(base_data, is.factor))
+    
+    # if it was retained, drop the outcome variable from the index
+    outcome_retained <- grepl(outcome_variable, names(non_factors))
+    if(any(outcome_retained)) {
+        non_factors <- non_factors[!outcome_retained]
+    }
+    
+    # drop out the x-axis variable from the index
+    x_axis_variable <- grepl(x_axis_selected, names(non_factors))
+    fixed_predictors <- non_factors[!x_axis_variable]
+    
+    # create dataframe with basic values for all predictors that need sliders
+    slider_set <- c()
+    for(index in 1:length(fixed_predictors)) {
+        var_name <- names(fixed_predictors[index])
+        # get a reasonable range from the base_data object (floor and ceiling
+        # used to make sure we have round, inclusive numbers)
+        var_min <- floor(range(with(base_data, get(var_name)))[1])
+        var_max <- ceiling(range(with(base_data, get(var_name)))[2])
+        # the starting value defaults to the base data mean (matches the
+        # initial behavior of the get_new_data function and thus the initial
+        # new_data object)
+        var_mean <- mean(with(base_data, get(var_name)))
+        slider_set <- rbind(slider_set, 
+                            data.frame(var_name, var_min, var_max, var_mean)
+        )
+    }
+    
+    # return the dataframe
+    return(slider_set)
 }
 
 ###############################################################################

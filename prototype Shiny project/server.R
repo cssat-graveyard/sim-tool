@@ -87,17 +87,6 @@ shinyServer(function(input, output, session) {
         
         x_label <- input$predictor_choice
         
-        # determine which variables in the base dataset are not factors
-        non_factors <- which(!sapply(base_data, is.factor))
-        # if it was retained, drop out the outcome variable
-        outcome_retained <- grepl(outcome_variable, names(non_factors))
-        if(any(outcome_retained)) {
-            non_factors <- non_factors[!outcome_retained]
-        }
-        # drop out the x-axis variable
-        x_axis_variable <- grepl(x_axis_selected, names(non_factors))
-        fixed_predictors <- non_factors[!x_axis_variable]
-        
         # generate representative data to feed coefficients
         new_data <- get_new_data(exp_data,
                                  base_data,
@@ -105,23 +94,10 @@ shinyServer(function(input, output, session) {
                                  x_axis_selected, 
                                  facet_variable = facet_selected)
         
-        # create dataframe with basic values for all predictors that need sliders
-        # the starting value defaults to the base data mean (assigned during
-        # the get_new_data call)
-        # the range is taken from the range in the base data
-        slider_set <- c()
-        for(index in 1:length(fixed_predictors)) {
-            var_name <- names(fixed_predictors[index])
-            var_min <- floor(range(with(base_data, get(var_name)))[1])
-            var_max <- ceiling(range(with(base_data, get(var_name)))[2])
-            var_mean <- mean(with(base_data, get(var_name)))
-            slider_set <- rbind(slider_set, 
-                                data.frame(var_name, var_min, var_max, var_mean)
-            )
-        }
-        
         # generate dynamic UI features (non-x-axis predictor adjustments) and
         # set their default values
+        slider_set <- get_sliders(base_data, outcome_variable, x_axis_selected)
+        
         output$fixed_predictors <- renderUI({
             lapply(1:nrow(slider_set), function(i) {
                 sliderInput(inputId = slider_set$var_name[[i]], 
@@ -133,27 +109,25 @@ shinyServer(function(input, output, session) {
         })
         
         # update the new data with inputs from the sliders
-        ### I AM HERE... EXPLORING OBSERVEEVENT TO MAKE THIS HAPPEN CORRECTLY ###
         lapply(1:nrow(slider_set), function(i) {
             current_var <- as.character(slider_set[["var_name"]])[i]
             # all the input variables initialize as "NULL" - we want to avoid
             # working with them until they've been assigned a value
-            if(!is.null(input[[current_var]])) {
-                new_data[current_var] <- input[[current_var]]
+            if(!is.null(isolate(input[[current_var]]))) {
+                new_data[current_var] <- isolate(input[[current_var]])
             }
+            
         })
-        
+
         # feed the representative data to the sampled coefficients to generate
         # our final simulated outcome likelihoods
-        prediction_object <- reactive({
-            mlogitsimev_med(new_data, 
-                            coeff_estimates, 
-                            ci = selected_ci)
-        })
+        prediction_object <- mlogitsimev_med(new_data, 
+                                             coeff_estimates, 
+                                             ci = selected_ci)
         
         # visualize the outcome likelihoods (this is what is captured as the
         # output object)
-        visualize_predictions(prediction_object(), 
+        visualize_predictions(prediction_object, 
                               exp_model, 
                               base_data,
                               new_data, 
