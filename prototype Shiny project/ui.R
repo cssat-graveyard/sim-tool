@@ -41,29 +41,35 @@ shinyUI(fluidPage(
                            min = 0, max = 100, value = 95)
            ),
            
-           conditionalPanel(
-               condition = "input.predictor_choice == 'Age'",
-               sliderInput("income_set", label = h3("What income?"),
-                           min = 0, max = 100000, value = 20000),
-               sliderInput("IQ_set", label = h3("What IQ?"),
-                           min = 0, max = 200, value = 100)
-           ),
+           wellPanel(
+               helpText("Adjust fixed (non-x-axis) predictors."),
+               
+               uiOutput("fixed_predictors")
+               )
            
-           conditionalPanel(
-               condition = "input.predictor_choice == 'Income'",
-               sliderInput("age_set", label = h3("What age?"),
-                           min = 0, max = 17, value = 9),
-               sliderInput("IQ_set", label = h3("What IQ?"),
-                           min = 0, max = 200, value = 100)
-           ),
-           
-           conditionalPanel(
-               condition = "input.predictor_choice == 'IQ'",
-               sliderInput("age_set", label = h3("What age?"),
-                           min = 0, max = 17, value = 9),
-               sliderInput("income_set", label = h3("What income?"),
-                           min = 0, max = 100000, value = 20000)
-           )
+#            conditionalPanel(
+#                condition = "input.predictor_choice == 'Age'",
+#                sliderInput("income_set", label = h3("What income?"),
+#                            min = 0, max = 100000, value = 20000),
+#                sliderInput("IQ_set", label = h3("What IQ?"),
+#                            min = 0, max = 200, value = 100)
+#            ),
+#            
+#            conditionalPanel(
+#                condition = "input.predictor_choice == 'Income'",
+#                sliderInput("age_set", label = h3("What age?"),
+#                            min = 0, max = 17, value = 9),
+#                sliderInput("IQ_set", label = h3("What IQ?"),
+#                            min = 0, max = 200, value = 100)
+#            ),
+#            
+#            conditionalPanel(
+#                condition = "input.predictor_choice == 'IQ'",
+#                sliderInput("age_set", label = h3("What age?"),
+#                            min = 0, max = 17, value = 9),
+#                sliderInput("income_set", label = h3("What income?"),
+#                            min = 0, max = 100000, value = 20000)
+#            )
     ),
     
     column(9, 
