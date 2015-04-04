@@ -49,7 +49,7 @@ source("COS custom mlogitsimev.R")
 # choose the data object we will be working with and specify the formula
 # (with respect to this data object)
 base_data <<- base_data
-model_formula <<- outcome ~ sex + age + income + iq
+model_formula <<- outcome ~ sex + age + income + iq + age * sex * income
 
 # expand the factors in the data object, re-add the outcome, drop the intercept
 exp_data <<- model.matrix(model_formula, base_data)
@@ -72,68 +72,101 @@ coeff_estimates <<- get_coefficient_estimates(1000, point_estimates,
 ## DEFINE THE OBJECTS FOR THE UI TO DISPLAY
 
 shinyServer(function(input, output, session) {
-    output$demo_plot <- renderPlot({
-        # collect fixed user inputs
-        x_axis_selected <- switch(input$predictor_choice,
-                                  "Age" = "age",
-                                  "Income" = "income",
-                                  "IQ" = "iq")
-        
-        facet_selected <- switch(input$facet_choice,
-                                 "None" = NULL,
-                                 "Sex" = "sex")
-        
-        selected_ci <- input$ci/100
-        
-        x_label <- input$predictor_choice
-        
-        # generate representative data to feed coefficients
-        new_data <- get_new_data(exp_data,
-                                 base_data,
-                                 exp_model, 
-                                 x_axis_selected, 
-                                 facet_variable = facet_selected)
-        
-        # generate dynamic UI features (non-x-axis predictor adjustments) and
-        # set their default values
-        slider_set <- get_sliders(base_data, outcome_variable, x_axis_selected)
-        
-        output$fixed_predictors <- renderUI({
-            lapply(1:nrow(slider_set), function(i) {
-                sliderInput(inputId = slider_set$var_name[[i]], 
-                            label = toupper(slider_set$var_name[[i]]),
-                            min = slider_set$var_min[i], 
-                            max = slider_set$var_max[i],
-                            value = slider_set$var_mean[i])
-            })
+    # create fixed user inputs
+    # all are reactive objects so that updates to these can be relied on to
+    # update any dependencies
+    x_axis_selected <- reactive({
+        switch(input$x_axis_choice,
+               "Age" = "age",
+               "Income" = "income",
+               "IQ" = "iq")
+    })
+    
+    facet_selected <- reactive({
+        switch(input$facet_choice,
+               "None" = NULL,
+               "Sex" = "sex")
+    })
+    
+    ci_selected <- reactive({
+        input$ci_choice/100
+    })
+    
+    x_label <- reactive({
+        input$x_axis_choice
+    })
+    
+    # generate representative data to feed coefficients
+    new_data <- reactive({
+        get_new_data(exp_data,
+                     base_data,
+                     exp_model, 
+                     x_axis_selected(), 
+                     facet_variable = facet_selected())
+    })
+    
+    # generate dynamic UI features (non-x-axis predictor adjustments) and
+    # set their default values
+    slider_set <- reactive({
+        get_sliders(base_data, 
+                    outcome_variable, 
+                    x_axis_selected())
+    })
+    
+    output$fixed_predictors <- renderUI({
+        lapply(1:nrow(slider_set()), function(i) {
+            sliderInput(inputId = slider_set()$var_name[[i]], 
+                        label = toupper(slider_set()$var_name[[i]]),
+                        min = slider_set()$var_min[i], 
+                        max = slider_set()$var_max[i],
+                        value = slider_set()$var_mean[i])
         })
+    })
+    
+    # update the new data with inputs from the sliders
+    new_data_fixed <- reactive({
+        # conditions under which new_data_fixed will get regenerated
+        # (important since we isolate the source new_data object itself)
+        # NOTE: this also updates any time one of the relevant sliders is
+        #       adjusted since those are reactive objects referenced below
+        #       without any isolation (i.e., input[[current_var]])
+        x_axis_selected()
+        facet_selected()
         
-        # update the new data with inputs from the sliders
-        lapply(1:nrow(slider_set), function(i) {
-            current_var <- as.character(slider_set[["var_name"]])[i]
+        # isolate the current new_data object
+        new_data_initial <- isolate(new_data())
+        
+        # update the values based on current slider inputs
+        for(i in 1:nrow(slider_set())) {
+            current_var <- as.character(slider_set()$var_name[i])
             # all the input variables initialize as "NULL" - we want to avoid
             # working with them until they've been assigned a value
-            if(!is.null(isolate(input[[current_var]]))) {
-                new_data[current_var] <- isolate(input[[current_var]])
+            if(!is.null(input[[current_var]])) {
+                new_data_initial[current_var] <- input[[current_var]]
             }
-            
-        })
-
-        # feed the representative data to the sampled coefficients to generate
-        # our final simulated outcome likelihoods
-        prediction_object <- mlogitsimev_med(new_data, 
-                                             coeff_estimates, 
-                                             ci = selected_ci)
+        }
         
-        # visualize the outcome likelihoods (this is what is captured as the
-        # output object)
-        visualize_predictions(prediction_object, 
+        return(new_data_initial)
+    })
+    
+    # feed the representative data to the sampled coefficients to generate
+    # our final simulated outcome likelihoods
+    prediction_object <- reactive({
+        mlogitsimev_med(new_data_fixed(), 
+                        coeff_estimates, 
+                        ci = ci_selected())
+    })
+    
+    # visualize the outcome likelihoods
+    output$demo_plot <- renderPlot({
+        visualize_predictions(prediction_object(), 
                               exp_model, 
                               base_data,
-                              new_data, 
-                              x_axis_selected, 
-                              facet_variable = facet_selected,
-                              y_lab = "Probability", x_lab = x_label)
+                              new_data_fixed(), 
+                              x_axis_selected(), 
+                              facet_variable = facet_selected(),
+                              y_lab = "Probability", 
+                              x_lab = x_label())
     })
 })
 

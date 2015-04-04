@@ -17,6 +17,11 @@
 #   the following paired interface/object sections
 #       - gator prototype
 
+
+## Configuration
+## I AM HERE; REPLACING THOSE HARD CODE LISTS WITH A NICE, CLEAN CONFIGURATION
+##   SECTION
+
 ###############################################################################
 ## STEP
 
@@ -27,7 +32,7 @@ shinyUI(fluidPage(
            wellPanel(
                helpText("Adjust predictors to explore how likelihoods change."),
                
-               radioButtons("predictor_choice", label = h3("Select X-Axis"), 
+               radioButtons("x_axis_choice", label = h3("Select X-Axis"), 
                             choices = list("Age", "Income", "IQ"), 
                             selected = "Age"),
                
@@ -36,7 +41,7 @@ shinyUI(fluidPage(
                             choices = list("None", "Sex"),
                             selected = "None"),
                
-               sliderInput("ci", 
+               sliderInput("ci_choice", 
                            label = "Confidence Interval",
                            min = 0, max = 100, value = 95)
            ),
