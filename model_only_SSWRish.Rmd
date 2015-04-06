@@ -101,6 +101,8 @@ dat1 <- sqlQuery(cn,
                 	join ps_tbl_children tc
                 	on tpd.dcid=tc.dcid")
 
+county_xwalk <- 
+
 #count the number of parents
 dat1_par <- length(unique(dat1$DCID))
 dat1_par
@@ -479,7 +481,7 @@ dat3$y17_fac = as.factor(ifelse(dat3$YENG17 < 1, NA, dat3$YENG17))
 dat3$y19_fac = as.factor(ifelse(dat3$YENG19 < 1, NA, dat3$YENG19))
 
 #relevel county 
-dat3$county <- relevel(dat3$county, ref = "King")
+dat3$REG <- relevel(as.factor(dat3$REG), ref = "4")
 
 
 #some additional vars
@@ -498,27 +500,40 @@ dat4 <- dat3[,c("outcome"
              ,"log_age_eps_begin"
              ,"non_min"
              ,"male"
-             ,"par_age"
              ,"log_par_age"
              ,"married"
              ,"hhnum_c"
              ,"rel_plc"
-             ,"eps_rank"
              ,"log_eps_rank"
              ,"housing_hs_cnt"
-             ,"hsg_hds"
              ,"high_in"
              ,"sm_coll"
              ,"employ"
-             ,"county"
+             ,"REG"
              )]
 
+dat4$non_min <- as.factor(dat4$non_min)
+dat4$male <- as.factor(dat4$male)
+dat4$married <- as.factor(dat4$married)
+dat4$rel_plc <- as.factor(dat4$rel_plc)
+dat4$high_in <- as.factor(dat4$high_in)
+dat4$sm_coll <- as.factor(dat4$sm_coll)
+dat4$employ <- as.factor(dat4$employ)
+
+#assign dat4 to data object for sim-tool app
+data <- dat4
 
 # run the multinomial model
-model <- multinom(outcome ~ . 
-                 ,data = dat4
+model <- multinom(outcome ~ . + employ*housing_hs_cnt +
+                    employ*high_in +
+                    employ*sm_coll +
+                    sm_coll*housing_hs_cnt +
+                    sm_coll*high_in + 
+                    high_in*housing_hs_cnt
+                 ,data = data
                  ,Hess = TRUE)
 
-summary(model)
+#save objects for sim-tool
+save(data, model, file = "data_model.RData")
 
 ```
