@@ -19,8 +19,8 @@
 
 
 ## Configuration
-## I AM HERE; REPLACING THOSE HARD CODE LISTS WITH A NICE, CLEAN CONFIGURATION
-##   SECTION
+x_axis_options <- list("Age", "Income", "IQ")
+facet_options <- list("None", "Sex")
 
 ###############################################################################
 ## STEP
@@ -33,13 +33,13 @@ shinyUI(fluidPage(
                helpText("Adjust predictors to explore how likelihoods change."),
                
                radioButtons("x_axis_choice", label = h3("Select X-Axis"), 
-                            choices = list("Age", "Income", "IQ"), 
-                            selected = "Age"),
+                            choices = x_axis_options, 
+                            selected = x_axis_options[[1]]),
                
                radioButtons("facet_choice", 
                             label = h3("Facet Choice"),
-                            choices = list("None", "Sex"),
-                            selected = "None"),
+                            choices = facet_options,
+                            selected = facet_options[[1]]),
                
                sliderInput("ci_choice", 
                            label = "Confidence Interval",
