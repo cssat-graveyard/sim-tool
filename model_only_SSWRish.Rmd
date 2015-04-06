@@ -1,25 +1,26 @@
 ---
 title: "Parent Survey Reunification Analysis Redux"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     theme: cerulean
+    toc: yes
+  pdf_document:
     toc: yes
   word_document: default
 ---
 
 ```{r preliminary, include=FALSE}
+
 #load the RODBC library
 library(RODBC)
 #loan nnet for multinom function 
 library(nnet)
-#load glmnet to help with cross validation 
-library(glmnet)
 #make pretty tables
 library(pander)
 #load lubridate to handle dates
 library(lubridate)
+#load psych to calc factor scores
+library(psych)
 ```
 # Overview
 
@@ -84,7 +85,7 @@ We next load the data from the parent survey itself. These data are available in
 
 `\\poc2\Practice Model\PARENT SURVEY I\Parent Data\Original Data\POC FINAL DATA.sav`
 
-As with the files described above, we export the data from SPSS to SQL Server on POC2 using the SPSS database utility. The data are stored in a table named `ps_tbl_parent_data`. We can join the two tables together using a SQL script. Here, however, we will do this directly in R using the `RODBC` package by `r citet(packbib[1])`.
+As with the files described above, we export the data from SPSS to SQL Server on POC2 using the SPSS database utility. The data are stored in a table named `ps_tbl_parent_data`. We can join the two tables together using a SQL script. Here, however, we will do this directly in R using the `RODBC` package.
 
 ```{r select_overall, tidy=FALSE, cache=TRUE}
 #assign a connection object
@@ -296,13 +297,13 @@ As can be seen, we are left with `r dat2_par`  parents and `r dat2_chi`  childre
 
 # Excluding Subjects by Case Characteristics
 
-The child welfare system in Washington engages families in a heterogeneous manner. One of the major distinctions between out-of-home care cases is the extent to which children are engaged by the court system. Some children enter out-of-home (OOH) care by way of a voluntary placement agreement (VPA), some children enter OOH care by way of a court order, and some begin their stay in OOH in a VPA and then transition to placement under a court order. Identifying these children is important as the path they take through the system significantly impacts their probability of exiting the system at any given time `r citep("10.1016/j.childyouth.2012.08.004")`. In our initial match of survey data above, we created a new variable called `crt_s` which indicated the extent to which a child had any court involvement in their dependency^1^. 
+The child welfare system in Washington engages families in a heterogeneous manner. One of the major distinctions between out-of-home care cases is the extent to which children are engaged by the court system. Some children enter out-of-home (OOH) care by way of a voluntary placement agreement (VPA), some children enter OOH care by way of a court order, and some begin their stay in OOH in a VPA and then transition to placement under a court order. Identifying these children is important as the path they take through the system significantly impacts their probability of exiting the system at any given time. In our initial match of survey data above, we created a new variable called `crt_s` which indicated the extent to which a child had any court involvement in their dependency^1^. 
 
 ```{r count_court_cases, results='asis', cache=TRUE, echo=FALSE}
 pander(table(factor(dat2$crt_s,levels=c(0,1),labels=c("No Court", "Court")), dnn="Count"))
 ```
 
-As can be seen there are 53 children who had no court involvement in their case. While event history models are flexible enough to include children who started in a VPA "state" and then transitions to either court involvement or some form of permanency, (see `r citet("10.1002/sim.2712")` for a review of this approach), the relatively small number of children starting in this state will not likely yield meaningful results. Including them in our analysis may, however, bias the results of our analysis of court-involved children. As such, these children will be excluded from our analysis. 
+As can be seen there are 53 children who had no court involvement in their case. While event history models are flexible enough to include children who started in a VPA "state" and then transitions to either court involvement or some form of permanency, the relatively small number of children starting in this state will not likely yield meaningful results. Including them in our analysis may, however, bias the results of our analysis of court-involved children. As such, these children will be excluded from our analysis. 
 
 Our study also includes a small number of children who, at the time of our last observation, had experienced either no permanency outcome or had experienced an outcome classified as "other". 
 
@@ -310,7 +311,7 @@ Our study also includes a small number of children who, at the time of our last 
 pander(table(dat2$outcome, dnn="Count"), split.table = Inf)
 ```
 
-While event history methods certainly provide for the ability to handle such observations (mainly through identifying the children as right-censored as described by `r citet("10.2307/2529941")`), we are specifically interested in using the current analysis to engage in predictive modeling. As standard event history methods have limited ability to predict outcomes, we further restrict our data to children who have exited to permanency by the end of 2013 and who had court involvement in their placement. This creates a relatively heterogenous group of children for our analysis and, since we actually observe a permanency outcome for all of the children, we needn't bother with event history methods in our analysis.  
+While event history methods certainly provide for the ability to handle such observations (mainly through identifying the children as right-censored), we are specifically interested in using the current analysis to engage in predictive modeling. As standard event history methods have limited ability to predict outcomes, we further restrict our data to children who have exited to permanency by the end of 2013 and who had court involvement in their placement. This creates a relatively heterogenous group of children for our analysis and, since we actually observe a permanency outcome for all of the children, we needn't bother with event history methods in our analysis.  
 
 ```{r final_data_subset}
 dat3 <- subset(dat2, !(dat2$outcome %in% c("Still in Care", "Other")) & dat2$crt_s == 1)
@@ -409,7 +410,6 @@ dat3$y19 = ifelse(dat3$YENG19 < 1, NA, dat3$YENG19)
 #next step is to calculate factor scores on the basis of the hypothetical factor structure of Yatchmenoff, 2005
 #note that indices are hard coded. if columns are added prior to this beyond those already coded, we will need to update the column indices accordingly
 #calculate factor scores
-library(psych)
 
 dat_recep <- dat3[,c(345:348)]
 dat_recep_scores <- fa.poly(dat_recep)
