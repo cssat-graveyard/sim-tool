@@ -13,33 +13,50 @@
 #       at all.)
 
 # sketch of script
-# - the shinyUI loop makes up the entirety of the script - it defines the
-#   the following paired interface/object sections
-#       - gator prototype
-
-
-## Configuration
-x_axis_options <- list("Age", "Income", "IQ")
-facet_options <- list("None", "Sex")
+# - Configuration Settings
+#   - for defining the options in the various UI features and, if needed,
+#     for defining the relationship between the options and the actual
+#     data objects
+# - Shiny UI Loop
+#   - page settings
+#   - define the user tools
+#   - define the visualization
 
 ###############################################################################
-## STEP
+## CONFIGURATION SETTINGS
+# what you want the user to see on the UI selection features and visualization
+x_axis_options <- list("Age", 
+                       "Income", 
+                       "IQ")
+facet_options <- list("None", 
+                      "Sex")
+
+# the relationship between the UI names and the data objects
+x_axis_conversions <- c("Age" = "age", 
+                        "Income" = "income", 
+                        "IQ" = "iq")
+facet_conversions <- c("None" = NULL, 
+                       "Sex" = "sex")
+
+###############################################################################
+## SHINY UI LOOP
 
 shinyUI(fluidPage(
+    # settings for the entire page
     titlePanel("SimTool Demo"),
     
-    column(3,
+    # define user tools in the first column
+    # width = 3 of 12 (Shiny divides the horizontal space up into 12 sections)
+    column(3, 
            wellPanel(
                helpText("Adjust predictors to explore how likelihoods change."),
                
                radioButtons("x_axis_choice", label = h3("Select X-Axis"), 
-                            choices = x_axis_options, 
-                            selected = x_axis_options[[1]]),
+                            choices = x_axis_options),
                
                radioButtons("facet_choice", 
                             label = h3("Facet Choice"),
-                            choices = facet_options,
-                            selected = facet_options[[1]]),
+                            choices = facet_options),
                
                sliderInput("ci_choice", 
                            label = "Confidence Interval",
@@ -53,6 +70,8 @@ shinyUI(fluidPage(
                )
     ),
     
+    # define the visualization in the second column
+    # width = 9 of 12
     column(9, 
            plotOutput("demo_plot")
     )

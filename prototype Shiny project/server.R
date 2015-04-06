@@ -49,7 +49,7 @@ source("COS custom mlogitsimev.R")
 # choose the data object we will be working with and specify the formula
 # (with respect to this data object)
 base_data <<- base_data
-model_formula <<- outcome ~ sex + age + income + iq + age * sex * income
+model_formula <<- outcome ~ sex + age + income + iq
 
 # expand the factors in the data object, re-add the outcome, drop the intercept
 exp_data <<- model.matrix(model_formula, base_data)
@@ -76,18 +76,13 @@ shinyServer(function(input, output, session) {
     # all are reactive objects so that updates to these can be relied on to
     # update any dependencies
     x_axis_selected <- reactive({
-        switch(input$x_axis_choice,
-               "Age" = "age",
-               "Income" = "income",
-               "IQ" = "iq")
+        x_axis_conversions[[input$x_axis_choice]]
     })
     
     facet_selected <- reactive({
-        switch(input$facet_choice,
-               "None" = NULL,
-               "Sex" = "sex")
+        facet_conversions[[input$facet_choice]]
     })
-    
+
     ci_selected <- reactive({
         input$ci_choice/100
     })
