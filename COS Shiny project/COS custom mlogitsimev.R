@@ -1,7 +1,7 @@
 # Author: Brian Waismeyer
 # Contact: bwaismeyer@gmail.com
 
-# Date created: 4/1/2015
+# Date created: 4/8/2015
 # Date updated: 
 
 ###############################################################################

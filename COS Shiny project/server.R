@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 4/7/2015
+# Date updated: 4/8/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -82,14 +82,29 @@ shinyServer(function(input, output, session) {
     # all are reactive objects so that updates to these can be relied on to
     # update any dependencies
     x_axis_selected <- reactive({
-        x_axis_conversions[[input$x_axis_choice]]
+        # filter the variable_configuration dataframe for the row with the
+        # matching UI name, extract the column name
+        variable_configuration[which(variable_configuration$pretty_name == 
+                                         input$x_axis_choice),
+                               ]$raw_name
     })
     
     facet_selected <- reactive({
-        facet_conversions[[input$facet_choice]]
+        # filter the variable_configuration dataframe for the row with the
+        # matching UI name, extract the column name
+        # UNLESS special variable "None" is selected, in which case return NULL
+        if(input$facet_choice == "None") {
+            return(NULL)
+        } else {
+            variable_configuration[which(variable_configuration$pretty_name == 
+                                             input$facet_choice),
+                                   ]$raw_name
+        }
     })
     
     x_label <- reactive({
+        # not necessary to define this - mostly done so that all my inputs are
+        # nicely stated at one spot in my code
         input$x_axis_choice
     })
     

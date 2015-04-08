@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 4/7/2015
+# Date updated: 4/8/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -14,9 +14,11 @@
 
 # sketch of script
 # - Configuration Settings
-#   - for defining the options in the various UI features and, if needed,
-#     for defining the relationship between the options and the actual
-#     data objects
+#   - where the admin defines the roles of the model variables and some other
+#     basic information
+# - Configuration Processing
+#   - the provided settings are processed so they are ready to be used with
+#     the Shiny UI Loop and the simulation/visualization functions
 # - Shiny UI Loop
 #   - page settings
 #   - define the user tools
@@ -24,27 +26,38 @@
 
 ###############################################################################
 ## CONFIGURATION SETTINGS
-# what you want the user to see on the UI selection features and visualization
-# x_axis_options <<- list("mist_scores",
-#                         "wrkg_scores",
-#                         "recep_scores",
-#                         "buyn_scores",
-#                         "log_age_eps_begin",
-#                         "housing_hs_cnt")
-  facet_options <<- list("None", 
-                         "Region")
+# provide key variable information (in this order, as strings)
+# - the user-friendly name of the variable
+# - the raw name of the variable (dataset column name)
+# - what role the variable plays in the model (outcome or predictor)
+# - what role the variable should play in the visualization (x-axis, x-axis + 
+#   slider, facet)
+variable_configuration <-list(
+    c("Parent Mistrust", "mist_scores", "predictor", "x-axis + slider"),
+    c("Parent Working Score", "wrkg_scores", "predictor", "x-axis + slider"),
+    c("Parent Receptivity", "recep_scores", "predictor", "x-axis + slider"),
+    c("Parent Buy-in", "buyn_scores", "predictor", "x-axis + slider"),
+    c("Age at Removal (log)", "log_age_eps_begin", "predictor", "x-axis + slider"),
+    c("Count of Housing Hardships", "housing_hs_cnt", "predictor", "x-axis + slider"),
+    c("Region", "REG", "predictor", "facet")
+)
 
-# the relationship between the UI names and the data objects
-x_axis_conversions <<- list("Parent mistrust" = "mist_scores",
-                            "Parent working score" = "wrkg_scores",
-                            "Parent receptivity" = "recep_scores",
-                            "Parent buy-in" = "buyn_scores",
-                            "Age at removal (log)" = "log_age_eps_begin",
-                            "Count of housing hardships" = "housing_hs_cnt")
-facet_conversions <<- list("None" = NULL, 
-                           "Region" = "REG")
+###############################################################################
+## CONFIGURATION PROCESSING
 
-x_axis_options <<- as.list(names(unlist(x_axis_conversions)))
+# reformat the variable information to make it easy to work with
+variable_configuration <- do.call(rbind, variable_configuration)
+variable_configuration <- data.frame(variable_configuration, 
+                                     stringsAsFactors = FALSE)
+names(variable_configuration) <- c("pretty_name", "raw_name", 
+                                   "model_role", "ui_role")
+
+# capture key subsets and features
+x_axis_options <- filter(variable_configuration, ui_role == "x-axis + slider" | 
+                               ui_role == "x-axis"
+                         )[["pretty_name"]]
+facet_options <- filter(variable_configuration, ui_role == "facet"
+                        )[["pretty_name"]]
 
 ###############################################################################
 ## SHINY UI LOOP
@@ -64,7 +77,7 @@ shinyUI(fluidPage(
                
                radioButtons("facet_choice", 
                             label = h3("Facet Choice"),
-                            choices = facet_options)
+                            choices = c("None", facet_options))
            ),
            
            wellPanel(
