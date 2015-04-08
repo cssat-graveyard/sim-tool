@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 3/27/2015
+# Date updated: 4/7/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -25,18 +25,26 @@
 ###############################################################################
 ## CONFIGURATION SETTINGS
 # what you want the user to see on the UI selection features and visualization
-x_axis_options <- list("Age", 
-                       "Income", 
-                       "IQ")
-facet_options <- list("None", 
-                      "Sex")
+# x_axis_options <<- list("mist_scores",
+#                         "wrkg_scores",
+#                         "recep_scores",
+#                         "buyn_scores",
+#                         "log_age_eps_begin",
+#                         "housing_hs_cnt")
+  facet_options <<- list("None", 
+                         "Region")
 
 # the relationship between the UI names and the data objects
-x_axis_conversions <- c("Age" = "age", 
-                        "Income" = "income", 
-                        "IQ" = "iq")
-facet_conversions <- c("None" = NULL, 
-                       "Sex" = "sex")
+x_axis_conversions <<- list("Parent mistrust" = "mist_scores",
+                            "Parent working score" = "wrkg_scores",
+                            "Parent receptivity" = "recep_scores",
+                            "Parent buy-in" = "buyn_scores",
+                            "Age at removal (log)" = "log_age_eps_begin",
+                            "Count of housing hardships" = "housing_hs_cnt")
+facet_conversions <<- list("None" = NULL, 
+                           "Region" = "REG")
+
+x_axis_options <<- as.list(names(unlist(x_axis_conversions)))
 
 ###############################################################################
 ## SHINY UI LOOP
@@ -67,7 +75,7 @@ shinyUI(fluidPage(
                helpText("Adjust fixed (non-x-axis) predictors."),
                
                uiOutput("fixed_predictors")
-               )
+           )
     ),
     
     # define the visualization in the second column

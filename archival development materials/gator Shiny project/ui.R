@@ -25,17 +25,17 @@
 ###############################################################################
 ## CONFIGURATION SETTINGS
 # what you want the user to see on the UI selection features and visualization
-x_axis_options <- list("Age", 
+x_axis_options <<- list("Age", 
                        "Income", 
                        "IQ")
-facet_options <- list("None", 
+facet_options <<- list("None", 
                       "Sex")
 
 # the relationship between the UI names and the data objects
-x_axis_conversions <- c("Age" = "age", 
+x_axis_conversions <<- list("Age" = "age", 
                         "Income" = "income", 
                         "IQ" = "iq")
-facet_conversions <- c("None" = NULL, 
+facet_conversions <<- list("None" = NULL, 
                        "Sex" = "sex")
 
 ###############################################################################

@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 3/27/2015
+# Date updated: 4/7/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -17,29 +17,32 @@
 #       named below).
 
 # sketch of script
-# - source the model script and sim/vis functions script
+# - source the model and data 
+# - source the scripts providing the functions to create the visualization
+#   from the model and data
 #
 # - build any static objects needed for simulation/visualization
 #   - select the source data
 #   - define the model formula
 #   - we need to "spread" the factors and interactions in a second data frame  
 #     so they are handled properly; this also results in an expanded model
-#     formula matchign the "spread" data frame
+#     formula matching the "spread" data frame
 #   - the first data frame is retained for factor/level information, the second
 #     is the data frame we will use for the model fitting and simulation
-#   - create all simulation objects except the new data and the visualization
+#   - create all simulation objects except the new data, the predictions
+#     summary object, and the visualization
 #
 # - define the shinyServer loop to turn the data objects into Shiny's output
 #   objects (and define any desired interactivty)
 #   - collect user inputs
 #   - generate the new data based on user input
-#   - feed the new data to the simulated coefficients
-#   - generate the visualization based on user input
+#   - feed the new data to the simulated coefficients (get prediction object)
+#   - generate the visualization based on user input and the prediction object
 
 ###############################################################################
-## SOURCE THE MODEL AND SIM/VIS SCRIPTS
+## SOURCE THE DATA, MODEL, AND SIM/VIS SCRIPTS
 
-source("COS test models.R")
+load("data_model.RData")
 source("COS sim and vis functions.R")
 source("COS custom mlogitsimev.R")
 
@@ -48,8 +51,11 @@ source("COS custom mlogitsimev.R")
 
 # choose the data object we will be working with and specify the formula
 # (with respect to this data object)
-base_data <<- base_data
-model_formula <<- outcome ~ sex + age + income + iq
+base_data <<- data[which(complete.cases(data)), ]
+model_formula <<- outcome ~ mist_scores + wrkg_scores + recep_scores + buyn_scores + 
+    log_age_eps_begin + non_min + male + log_par_age + married + 
+    hhnum_c + rel_plc + log_eps_rank + housing_hs_cnt + high_in + 
+    sm_coll + employ + REG + male * log_par_age
 
 # expand the factors in the data object, re-add the outcome, drop the intercept
 exp_data <<- model.matrix(model_formula, base_data)

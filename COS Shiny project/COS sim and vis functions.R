@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/25/2015
-# Date updated: 3/27/2015
+# Date updated: 4/7/2015
 
 # NOTE: Functions were largely developed in the "gator model example V3.R"
 #       script. That script was archived to allow us to seperate the model
@@ -65,6 +65,7 @@
 #     dataframe); visualize with ggplot
 #
 # - WRAPPER FUNCTION FOR SIMULATION AND VISUALIZATION (FOR OFFLINE TESTING)
+#   [PROBABLY OUTDATED - DON'T USE WITHOUT INSPECTING]
 #   - simply lets you manually generate plot objects to test app behavior
 #     "under the hood"
 #
@@ -130,7 +131,10 @@ get_point_estimates <- function(model_object) {
 
 # function to get the covariance matrix from the Hessian in the model object
 get_covariance_matrix <- function(model_object) {
-    solve(model_object$Hess)
+    cov_matrix <- chol2inv(chol(model_object$Hess))
+    dimnames(cov_matrix) <- dimnames(model_object$Hess)
+    
+    return(cov_matrix)
 }
 
 # function to get coefficient estimates via simulation
@@ -360,11 +364,13 @@ visualize_predictions <- function(prediction_object, model_object,
     plot_object <- ggplot(tidy_sim, aes(x = predictor, y = pe, 
                                         group = outcome, 
                                         ymin = lower, ymax = upper)) + 
-        geom_line() +
         # takes the ymin and ymax and draws a ribbon around the lines
         geom_ribbon(alpha = 0.5, aes(fill = outcome)) + 
+        geom_line(aes(color = outcome)) +
         scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
         theme_bw() +
+        theme(panel.grid.minor = element_blank(), 
+              panel.grid.major = element_blank()) +
         xlab(x_lab) +
         ylab(y_lab)
     

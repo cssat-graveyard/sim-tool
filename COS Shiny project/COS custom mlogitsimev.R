@@ -98,6 +98,7 @@ mlogitsimev_med <- function (x, b, ci = 0.95, constant = 1, z = NULL, g = NULL,
         }
         simy <- matrix(NA, nrow = dim(b)[1], ncol = (dim(b)[3] + 
                                                          1))
+        
         for (icat in 1:dim(x)[3]) {
             if (usegamma) 
                 simy[, icat] <- exp(b[, , icat] %*% x[iscen, 
@@ -108,10 +109,12 @@ mlogitsimev_med <- function (x, b, ci = 0.95, constant = 1, z = NULL, g = NULL,
         if (usegamma) 
             simy[, ncol(simy)] <- exp(g %*% z[iscen, , dim(g)[3]])/simdenom
         else simy[, ncol(simy)] <- 1/simdenom
+        
         simy <- apply(simy, 2, sort)
         ## REVISION ##
         # technique for calculating point estimate (pe) changed from mean to
         # median
+        
         res$pe <- rbind(res$pe, apply(simy, 2, median))
         length.simy <- nrow(simy)
         low <- up <- NULL
