@@ -13,18 +13,19 @@
 #       The function passes representative generated data to a collection of
 #       simulated coefficients. It then summarizes the results to return key
 #       features for each representative case passed to the cofficients:
-#       point estimate (mean), upper value (quartile based on given confidence 
-#       interval), lower value (quartile based on given confidence interval).
+#       point estimate (mean), upper value (quantile based on given confidence 
+#       interval), lower value (quantile based on given confidence interval).
 #
-#       The updated function changes the point estimate technique from "mean"
-#       (as described above) to "median". This is perhaps a more common choice
-#       for this kind of simulation and avoids issues that arise as confidence
-#       intervals get narrow (e.g., the mean falling outside the upper and 
-#       lower quartiles).
+#       The updated function:
+#       1. Changes the point estimate technique from "mean" (as described above)
+#          to "median". This is perhaps a more common choice for this kind of
+#          simulation and avoids issues that arise as confidence intervals get
+#          narrow (e.g., the mean falling outside the upper and lower 
+#          quartiles).
 
 # sketch of script
 # - the function as written by Chris Adolph
-#   - the revision is marked with a comment ## REVISION ##
+#   - any changes are marked with ## REVISION ##
 
 ###############################################################################
 ## STEP
@@ -73,9 +74,9 @@ mlogitsimev_med <- function (x, b, ci = 0.95, constant = 1, z = NULL, g = NULL,
         stop("if g is provided, z must be an array with dimension 3 equal to the number of categories")
     }
     esims <- nrow(as.matrix(b))
-    res <- list(lower = array(0, dim = c(dim(x)[1], (dim(x)[3] + 
-                                                         1), length(ci))), upper = array(0, dim = c(dim(x)[1], 
-                                                                                                    (dim(x)[3] + 1), length(ci))))
+    res <- list(lower = array(0, dim = c(dim(x)[1], (dim(x)[3] + 1), length(ci))), 
+                upper = array(0, dim = c(dim(x)[1], (dim(x)[3] + 1), length(ci)))
+                )
     if (predict) 
         res$pv <- NULL
     for (iscen in 1:dim(x)[1]) {
@@ -111,10 +112,10 @@ mlogitsimev_med <- function (x, b, ci = 0.95, constant = 1, z = NULL, g = NULL,
         else simy[, ncol(simy)] <- 1/simdenom
         
         simy <- apply(simy, 2, sort)
+        
         ## REVISION ##
         # technique for calculating point estimate (pe) changed from mean to
         # median
-        
         res$pe <- rbind(res$pe, apply(simy, 2, median))
         length.simy <- nrow(simy)
         low <- up <- NULL

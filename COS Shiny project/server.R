@@ -88,10 +88,6 @@ shinyServer(function(input, output, session) {
     facet_selected <- reactive({
         facet_conversions[[input$facet_choice]]
     })
-
-    ci_selected <- reactive({
-        input$ci_choice/100
-    })
     
     x_label <- reactive({
         input$x_axis_choice
@@ -155,19 +151,27 @@ shinyServer(function(input, output, session) {
     prediction_object <- reactive({
         mlogitsimev_med(new_data_fixed(), 
                         coeff_estimates, 
-                        ci = ci_selected())
+                        ci = c(0.95, 0.50))
+    })
+    
+    # format the simulated outcome likelihoods for visualization
+    formatted_data <- reactive({
+        format_for_visualization(prediction_object(),
+                                 exp_model,
+                                 base_data,
+                                 new_data_fixed(),
+                                 x_axis_selected(),
+                                 facet_variable = facet_selected()
+        )
     })
     
     # visualize the outcome likelihoods
-    output$demo_plot <- renderPlot({
-        visualize_predictions(prediction_object(), 
-                              exp_model, 
-                              base_data,
-                              new_data_fixed(), 
-                              x_axis_selected(), 
-                              facet_variable = facet_selected(),
-                              y_lab = "Probability", 
-                              x_lab = x_label())
+    output$ribbon_plot <- renderPlot({
+        get_ribbon_plot(formatted_data(), 
+                        facet_variable = facet_selected(),
+                        y_lab = "Probability", 
+                        x_lab = x_label()
+        )
     })
 })
 

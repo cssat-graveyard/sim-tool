@@ -60,9 +60,11 @@
 #   - generate data to feed to coefficient estimates
 #   - get the outcome predictions (feed the estimates!)
 #
-# - FUNCTION TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
+# - FUNCTIONS TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
 #   - rearrange the outcome predictions to interface with ggplot (tidy 
-#     dataframe); visualize with ggplot
+#     dataframe)
+#   - visualize with ggplot
+#   - may be multiple visualizations for development purposes
 #
 # - WRAPPER FUNCTION FOR SIMULATION AND VISUALIZATION (FOR OFFLINE TESTING)
 #   [PROBABLY OUTDATED - DON'T USE WITHOUT INSPECTING]
@@ -304,18 +306,22 @@ get_new_data <- function(exp_data, base_data, model_object,
 # NO NEW FUNCTION NEEDED - THIS IS HANDLED BY mlogitsimev
 
 ###############################################################################
-## FUNCTIONs TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
+## FUNCTIONS TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
 
-visualize_predictions <- function(prediction_object, model_object,
-                                  base_data,
-                                  counterfactuals,
-                                  x_axis_variable, facet_variable = NULL,
-                                  x_lab = "Predictor", y_lab = "p(Outcome)") {
+format_for_visualization <- function(prediction_object, 
+                                     model_object, 
+                                     base_data,
+                                     counterfactuals,
+                                     x_axis_variable, 
+                                     facet_variable = NULL) {
+    
     # the mlogit structure is a collection of arrays but ggplot wants dataframes
     # first we extract the arrays as matrices and bind them together
     num_col <- ncol(prediction_object$lower)
-    tidy_sim <- rbind(matrix(prediction_object$lower, ncol = num_col),
-                      matrix(prediction_object$upper, ncol = num_col),
+    tidy_sim <- rbind(matrix(prediction_object$lower[, , 1], ncol = num_col),
+                      matrix(prediction_object$lower[, , 2], ncol = num_col),
+                      matrix(prediction_object$upper[, , 1], ncol = num_col),
+                      matrix(prediction_object$upper[, , 2], ncol = num_col),
                       matrix(prediction_object$pe, ncol = num_col)
     )
     
@@ -327,7 +333,9 @@ visualize_predictions <- function(prediction_object, model_object,
     names(tidy_sim) <- model_object$lab
     # add a grouping variable for the three types of measures we get from
     # the prediction object
-    tidy_sim$measure_type <- rep(c("lower", "upper", "pe"), 
+    tidy_sim$measure_type <- rep(c("lower95", "lower50", 
+                                   "upper95", "upper50", 
+                                   "pe"), 
                                  each = nrow(prediction_object$upper))
     # we also add the predictor (x-axis) value that will link the unique sets
     # (lower, upper, pe) - this should naturally repeat to the appropriate
@@ -360,12 +368,22 @@ visualize_predictions <- function(prediction_object, model_object,
     }
     tidy_sim <- spread(tidy_sim, measure_type, likelihood)
     
-    # built the plot object
-    plot_object <- ggplot(tidy_sim, aes(x = predictor, y = pe, 
-                                        group = outcome, 
-                                        ymin = lower, ymax = upper)) + 
+    # returning our visualization-ready data
+    return(tidy_sim)
+}
+
+get_ribbon_plot <- function(formatted_data,
+                         facet_variable = NULL,
+                         x_lab = "Predictor", y_lab = "p(Outcome)") {
+    
+    # build the plot object
+    plot_object <- ggplot(formatted_data, aes(x = predictor, y = pe, 
+                                              group = outcome, 
+                                              ymin = lower95, ymax = upper95)) + 
         # takes the ymin and ymax and draws a ribbon around the lines
         geom_ribbon(alpha = 0.5, aes(fill = outcome)) + 
+        geom_ribbon(alpha = 0.5, aes(fill = outcome,
+                                     ymin = lower50, ymax = upper50)) +
         geom_line(aes(color = outcome)) +
         scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
         theme_bw() +
@@ -385,6 +403,7 @@ visualize_predictions <- function(prediction_object, model_object,
 
 ###############################################################################
 ## TEST WRAPPER
+# OUT OF DATE - REVIEW BEFORE TRYING TO USE
 
 test_wrapper <- function(dataset, model_object, 
                          x_axis_variable, facet_variable = NULL,

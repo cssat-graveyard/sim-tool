@@ -64,11 +64,7 @@ shinyUI(fluidPage(
                
                radioButtons("facet_choice", 
                             label = h3("Facet Choice"),
-                            choices = facet_options),
-               
-               sliderInput("ci_choice", 
-                           label = "Confidence Interval",
-                           min = 0, max = 100, value = 95)
+                            choices = facet_options)
            ),
            
            wellPanel(
@@ -81,7 +77,7 @@ shinyUI(fluidPage(
     # define the visualization in the second column
     # width = 9 of 12
     column(9, 
-           plotOutput("demo_plot")
+           plotOutput("ribbon_plot")
     )
 ))
 
