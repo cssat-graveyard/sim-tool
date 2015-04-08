@@ -185,7 +185,8 @@ shinyServer(function(input, output, session) {
         get_ribbon_plot(formatted_data(), 
                         facet_variable = facet_selected(),
                         y_lab = "Probability", 
-                        x_lab = x_label()
+                        x_lab = x_label(),
+                        custom_colors = rage_colors
         )
     })
 })

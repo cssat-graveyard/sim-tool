@@ -374,7 +374,9 @@ format_for_visualization <- function(prediction_object,
 
 get_ribbon_plot <- function(formatted_data,
                          facet_variable = NULL,
-                         x_lab = "Predictor", y_lab = "p(Outcome)") {
+                         x_lab = "Predictor", 
+                         y_lab = "p(Outcome)",
+                         custom_colors = NULL) {
     
     # build the plot object
     plot_object <- ggplot(formatted_data, aes(x = predictor, y = pe, 
@@ -384,13 +386,18 @@ get_ribbon_plot <- function(formatted_data,
         geom_ribbon(alpha = 0.5, aes(fill = outcome)) + 
         geom_ribbon(alpha = 0.5, aes(fill = outcome,
                                      ymin = lower50, ymax = upper50)) +
-        geom_line(aes(color = outcome)) +
+        #geom_line(aes(color = outcome)) +
         scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
         theme_bw() +
         theme(panel.grid.minor = element_blank(), 
               panel.grid.major = element_blank()) +
         xlab(x_lab) +
         ylab(y_lab)
+    
+    # if custom colors are provided, adjust the color scale
+    if(!is.null(custom_colors)) {
+        plot_object <- plot_object + scale_fill_manual(values = custom_colors)
+    }
     
     # if a facet variable is set, add the facet layer to the plot object
     if(!is.null(facet_variable)) {

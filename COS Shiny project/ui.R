@@ -16,6 +16,7 @@
 # - Configuration Settings
 #   - where the admin defines the roles of the model variables and some other
 #     basic information
+#   - also provide the POC color scheme to be called during plot creation
 # - Configuration Processing
 #   - the provided settings are processed so they are ready to be used with
 #     the Shiny UI Loop and the simulation/visualization functions
@@ -26,6 +27,7 @@
 
 ###############################################################################
 ## CONFIGURATION SETTINGS
+
 # provide key variable information (in this order, as strings)
 # - the user-friendly name of the variable
 # - the raw name of the variable (dataset column name)
@@ -33,14 +35,29 @@
 # - what role the variable should play in the visualization (x-axis, x-axis + 
 #   slider, facet)
 variable_configuration <-list(
-    c("Parent Mistrust", "mist_scores", "predictor", "x-axis + slider"),
-    c("Parent Working Score", "wrkg_scores", "predictor", "x-axis + slider"),
-    c("Parent Receptivity", "recep_scores", "predictor", "x-axis + slider"),
-    c("Parent Buy-in", "buyn_scores", "predictor", "x-axis + slider"),
-    c("Age at Removal (log)", "log_age_eps_begin", "predictor", "x-axis + slider"),
-    c("Count of Housing Hardships", "housing_hs_cnt", "predictor", "x-axis + slider"),
-    c("Region", "REG", "predictor", "facet")
+    c("Parent Mistrust", "mist_scores", 
+      "predictor", "x-axis + slider"),
+    c("Parent Working Score", "wrkg_scores", 
+      "predictor", "x-axis + slider"),
+    c("Parent Receptivity", "recep_scores", 
+      "predictor", "x-axis + slider"),
+    c("Parent Buy-in", "buyn_scores", 
+      "predictor", "x-axis + slider"),
+    c("Age at Removal (log)", "log_age_eps_begin", 
+      "predictor", "x-axis + slider"),
+    c("Count of Housing Hardships", "housing_hs_cnt", 
+      "predictor", "x-axis + slider"),
+    c("Region", "REG", 
+      "predictor", "facet")
 )
+
+
+# provide the POC colors and which colors to use for various visualizations
+poc_colors = c("#3B6E8F", "#A2B69A", "#A3DCE6", "#A784B4")
+portal_colors = c("#D9BB32", "#6DB33F", "#6E9CAE", "#B1662B", "#5B8067", 
+                  "#444D3E", "#994D3E", "#10475B", "#7D6E86", "#D47079", 
+                  "#262F1D", "#B0B0B0")
+rage_colors = portal_colors[c(1, 2, 3, 4)]
 
 ###############################################################################
 ## CONFIGURATION PROCESSING
@@ -58,6 +75,7 @@ x_axis_options <- filter(variable_configuration, ui_role == "x-axis + slider" |
                          )[["pretty_name"]]
 facet_options <- filter(variable_configuration, ui_role == "facet"
                         )[["pretty_name"]]
+slider_set <- filter(variable_configuration, ui_role == "x-axis + slider")
 
 ###############################################################################
 ## SHINY UI LOOP
@@ -69,9 +87,7 @@ shinyUI(fluidPage(
     # define user tools in the first column
     # width = 3 of 12 (Shiny divides the horizontal space up into 12 sections)
     column(3, 
-           wellPanel(
-               helpText("Adjust predictors to explore how likelihoods change."),
-               
+           wellPanel(               
                radioButtons("x_axis_choice", label = h3("Select X-Axis"), 
                             choices = x_axis_options),
                
