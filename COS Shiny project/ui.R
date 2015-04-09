@@ -34,7 +34,7 @@
 # - what role the variable plays in the model (outcome or predictor)
 # - what role the variable should play in the visualization (x-axis, x-axis + 
 #   slider, facet)
-variable_configuration <-list(
+variable_configuration <<- list(
     c("Parent Mistrust", "mist_scores", 
       "predictor", "x-axis + slider"),
     c("Parent Working Score", "wrkg_scores", 
@@ -53,29 +53,29 @@ variable_configuration <-list(
 
 
 # provide the POC colors and which colors to use for various visualizations
-poc_colors = c("#3B6E8F", "#A2B69A", "#A3DCE6", "#A784B4")
-portal_colors = c("#D9BB32", "#6DB33F", "#6E9CAE", "#B1662B", "#5B8067", 
+poc_colors <<- c("#3B6E8F", "#A2B69A", "#A3DCE6", "#A784B4")
+portal_colors <<- c("#D9BB32", "#6DB33F", "#6E9CAE", "#B1662B", "#5B8067", 
                   "#444D3E", "#994D3E", "#10475B", "#7D6E86", "#D47079", 
                   "#262F1D", "#B0B0B0")
-rage_colors = portal_colors[c(1, 2, 3, 4)]
+rage_colors <<- portal_colors[c(1, 2, 3, 4)]
 
 ###############################################################################
 ## CONFIGURATION PROCESSING
 
 # reformat the variable information to make it easy to work with
-variable_configuration <- do.call(rbind, variable_configuration)
-variable_configuration <- data.frame(variable_configuration, 
+variable_configuration <<- do.call(rbind, variable_configuration)
+variable_configuration <<- data.frame(variable_configuration, 
                                      stringsAsFactors = FALSE)
-names(variable_configuration) <- c("pretty_name", "raw_name", 
+names(variable_configuration) <<- c("pretty_name", "raw_name", 
                                    "model_role", "ui_role")
 
 # capture key subsets and features
-x_axis_options <- filter(variable_configuration, ui_role == "x-axis + slider" | 
+x_axis_options <<- filter(variable_configuration, ui_role == "x-axis + slider" | 
                                ui_role == "x-axis"
                          )[["pretty_name"]]
-facet_options <- filter(variable_configuration, ui_role == "facet"
+facet_options <<- filter(variable_configuration, ui_role == "facet"
                         )[["pretty_name"]]
-slider_set <- filter(variable_configuration, ui_role == "x-axis + slider")
+slider_options <<- filter(variable_configuration, ui_role == "x-axis + slider")
 
 ###############################################################################
 ## SHINY UI LOOP

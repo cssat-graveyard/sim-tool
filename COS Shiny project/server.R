@@ -82,6 +82,7 @@ shinyServer(function(input, output, session) {
     # all are reactive objects so that updates to these can be relied on to
     # update any dependencies
     x_axis_selected <- reactive({
+        #browser()
         # filter the variable_configuration dataframe for the row with the
         # matching UI name, extract the column name
         variable_configuration[which(variable_configuration$pretty_name == 
@@ -90,6 +91,7 @@ shinyServer(function(input, output, session) {
     })
     
     facet_selected <- reactive({
+        #browser()
         # filter the variable_configuration dataframe for the row with the
         # matching UI name, extract the column name
         # UNLESS special variable "None" is selected, in which case return NULL
@@ -103,6 +105,7 @@ shinyServer(function(input, output, session) {
     })
     
     x_label <- reactive({
+        #browser()
         # not necessary to define this - mostly done so that all my inputs are
         # nicely stated at one spot in my code
         input$x_axis_choice
@@ -110,6 +113,7 @@ shinyServer(function(input, output, session) {
     
     # generate representative data to feed coefficients
     new_data <- reactive({
+        #browser()
         get_new_data(exp_data,
                      base_data,
                      exp_model, 
@@ -120,23 +124,41 @@ shinyServer(function(input, output, session) {
     # generate dynamic UI features (non-x-axis predictor adjustments) and
     # set their default values
     slider_set <- reactive({
-        get_sliders(base_data, 
-                    outcome_variable, 
-                    x_axis_selected())
+        #browser()
+        get_sliders(x_axis_selected = x_axis_selected(), 
+                    slider_raw_names = slider_options$raw_name, 
+                    slider_pretty_names = slider_options$pretty_name, 
+                    base_data = base_data, 
+                    auto = FALSE, 
+                    outcome_variable = outcome_variable)
     })
     
     output$fixed_predictors <- renderUI({
+        #browser()
+        # check if pretty names are available - use them if they are or 
+        # simply use the raw column names
+        if("var_pretty_name" %in% names(slider_set())) {
+            label_name <- slider_set()$var_pretty_name
+        } else {
+            label_name <- toupper(slider_set()$var_raw_name)
+        }
+        # collect the initial values for the sliders from the new_data object
+        start_values <- new_data()[slider_set()$var_raw_name][1,]
+        
+        # generate the sliders
         lapply(1:nrow(slider_set()), function(i) {
-            sliderInput(inputId = slider_set()$var_name[[i]], 
-                        label = toupper(slider_set()$var_name[[i]]),
+            sliderInput(inputId = slider_set()$var_raw_name[i], 
+                        label = label_name[i],
                         min = slider_set()$var_min[i], 
                         max = slider_set()$var_max[i],
-                        value = slider_set()$var_mean[i])
+                        value = start_values[[i]],
+                        step = 0.001)
         })
     })
     
     # update the new data with inputs from the sliders
     new_data_fixed <- reactive({
+        #browser()
         # conditions under which new_data_fixed will get regenerated
         # (important since we isolate the source new_data object itself)
         # NOTE: this also updates any time one of the relevant sliders is
@@ -150,7 +172,7 @@ shinyServer(function(input, output, session) {
         
         # update the values based on current slider inputs
         for(i in 1:nrow(slider_set())) {
-            current_var <- as.character(slider_set()$var_name[i])
+            current_var <- slider_set()$var_raw_name[i]
             # all the input variables initialize as "NULL" - we want to avoid
             # working with them until they've been assigned a value
             if(!is.null(input[[current_var]])) {
@@ -164,6 +186,7 @@ shinyServer(function(input, output, session) {
     # feed the representative data to the sampled coefficients to generate
     # our final simulated outcome likelihoods
     prediction_object <- reactive({
+        #browser()
         mlogitsimev_med(new_data_fixed(), 
                         coeff_estimates, 
                         ci = c(0.95, 0.50))
@@ -171,6 +194,7 @@ shinyServer(function(input, output, session) {
     
     # format the simulated outcome likelihoods for visualization
     formatted_data <- reactive({
+        #browser()
         format_for_visualization(prediction_object(),
                                  exp_model,
                                  base_data,
@@ -182,6 +206,7 @@ shinyServer(function(input, output, session) {
     
     # visualize the outcome likelihoods
     output$ribbon_plot <- renderPlot({
+        #browser()
         get_ribbon_plot(formatted_data(), 
                         facet_variable = facet_selected(),
                         y_lab = "Probability", 
@@ -189,6 +214,7 @@ shinyServer(function(input, output, session) {
                         custom_colors = rage_colors
         )
     })
+    
 })
 
 

@@ -317,6 +317,9 @@ format_for_visualization <- function(prediction_object,
     
     # the mlogit structure is a collection of arrays but ggplot wants dataframes
     # first we extract the arrays as matrices and bind them together
+    # NOTE: the lower/upper arrays will have as many dimensions as there are
+    #       confidence intervals (here we have 2 dimensions because we ask
+    #       for 95 and 50 percent CI in our mlogitsimev call)
     num_col <- ncol(prediction_object$lower)
     tidy_sim <- rbind(matrix(prediction_object$lower[, , 1], ncol = num_col),
                       matrix(prediction_object$lower[, , 2], ncol = num_col),
@@ -373,10 +376,10 @@ format_for_visualization <- function(prediction_object,
 }
 
 get_ribbon_plot <- function(formatted_data,
-                         facet_variable = NULL,
-                         x_lab = "Predictor", 
-                         y_lab = "p(Outcome)",
-                         custom_colors = NULL) {
+                            facet_variable = NULL,
+                            x_lab = "Predictor", 
+                            y_lab = "p(Outcome)",
+                            custom_colors = NULL) {
     
     # build the plot object
     plot_object <- ggplot(formatted_data, aes(x = predictor, y = pe, 
@@ -436,39 +439,71 @@ test_wrapper <- function(dataset, model_object,
 ###############################################################################
 ## ADDITIONAL HELPER FUNCTIONS
 
-get_sliders <- function(base_data, outcome_variable, x_axis_selected) {
-    # make index of variables in the base dataset which are NOT factors
-    non_factors <- which(!sapply(base_data, is.factor))
+# This function will generate the key features needed to create the sliders. By
+# default it expects an explicit index of variables that are allowed to be
+# given a slider. However, 'auto' mode can be turned on and - so long as 
+# the outcome_variable is provided - the function will generate sliders
+# intelligently (but inefficiently) from the data itself.
+get_sliders <- function(x_axis_selected,
+                        slider_raw_names,
+                        slider_pretty_names = NA,
+                        base_data,
+                        auto = FALSE, 
+                        outcome_variable = NULL) {
     
-    # if it was retained, drop the outcome variable from the index
-    outcome_retained <- grepl(outcome_variable, names(non_factors))
-    if(any(outcome_retained)) {
-        non_factors <- non_factors[!outcome_retained]
+    if(auto) {
+        # make index of variables in the base dataset which are NOT factors
+        slider_index <- which(!sapply(base_data, is.factor))
+        
+        # if it was retained, set the outcome variable index to FALSE
+        outcome_retained <- grepl(outcome_variable, names(slider_index))
+        if(any(outcome_retained)) {
+            slider_index[outcome_retained] <- FALSE
+        }
+    } else {
+        # if 'auto' is FALSE, then expect raw names to be provided and use them
+        slider_index <- names(base_data) %in% slider_raw_names
+        # this approach loses the variable names, so we restore them
+        names(slider_index) <- names(base_data)
     }
     
-    # drop out the x-axis variable from the index
-    x_axis_variable <- grepl(x_axis_selected, names(non_factors))
-    fixed_predictors <- non_factors[!x_axis_variable]
+    # set the x-axis variable to FALSE in the index
+    x_axis_variable <- grepl(x_axis_selected, names(slider_index))
+    slider_index[x_axis_variable] <- FALSE
+    
+    # create a dataframe with just the retained slider variables
+    slider_selections <- base_data[slider_index]
     
     # create dataframe with basic values for all predictors that need sliders
-    slider_set <- c()
-    for(index in 1:length(fixed_predictors)) {
-        var_name <- names(fixed_predictors[index])
+    slider_features <- c()
+    for(index in 1:length(slider_selections)) {
+        var_raw_name <- names(slider_selections)[index]
         # get a reasonable range from the base_data object (floor and ceiling
         # used to make sure we have round, inclusive numbers)
-        var_min <- floor(range(with(base_data, get(var_name)))[1])
-        var_max <- ceiling(range(with(base_data, get(var_name)))[2])
-        # the starting value defaults to the base data mean (matches the
+        var_min <- floor(range(with(slider_selections, get(var_raw_name)))[1])
+        var_max <- ceiling(range(with(slider_selections, get(var_raw_name)))[2])
+        # the starting value defaults to the base data median (matches the
         # initial behavior of the get_new_data function and thus the initial
         # new_data object)
-        var_mean <- mean(with(base_data, get(var_name)))
-        slider_set <- rbind(slider_set, 
-                            data.frame(var_name, var_min, var_max, var_mean)
+        var_median <- median(with(slider_selections, get(var_raw_name)))
+        slider_features <- rbind(slider_features, 
+                                 data.frame(var_raw_name,
+                                            var_min, var_max, var_median,
+                                            stringsAsFactors = FALSE)
         )
     }
     
-    # return the dataframe
-    return(slider_set)
+    # if pretty names were given, add these to the features...
+    if(!is.na(slider_pretty_names)) {
+        # but first have to drop out the x-axis variable again
+        x_axis_variable <- grepl(x_axis_selected, slider_raw_names)
+        slider_pretty_names <- slider_pretty_names[!x_axis_variable]
+        # then assign the pretty names
+        slider_features$var_pretty_name <- slider_pretty_names
+    }
+    
+    # return the dataframe of slider features
+    return(slider_features)
 }
 
 ###############################################################################
