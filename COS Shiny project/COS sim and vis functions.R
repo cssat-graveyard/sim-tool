@@ -175,28 +175,28 @@ get_coefficient_estimates <- function(sample_size,
 
 # generate data to feed the coefficient estimates
 get_new_data <- function(exp_data, base_data, model_object,
-                         x_axis_variable, x_range = NULL, x_range_density = 100,
-                         facet_variable = NULL) {
+                         x_axis_selected, x_range = NULL, x_range_density = 100,
+                         facet_selected = NULL) {
     # check if an explicit range has been provided for the x-axis variable
     if(is.null(x_range)) {
         # if not provided, calculate the range from the dataset
         # floor and ceiling used to insure some space around the observed data
-        x_range[1] <- floor(min(exp_data[x_axis_variable]))
-        x_range[2] <- ceiling(max(exp_data[x_axis_variable]))
+        x_range[1] <- floor(min(exp_data[x_axis_selected]))
+        x_range[2] <- ceiling(max(exp_data[x_axis_selected]))
     }
     
     # initialize the minimum set of counterfactuals (the x-axis variable cuts)
     counterfactuals <- seq(x_range[1], x_range[2], length.out = x_range_density)
     
     # check if a facet variable has been set
-    if(!is.null(facet_variable)) {
+    if(!is.null(facet_selected)) {
         # if a facet variable has been set, we expand the counterfactuals
         # to include all x-axis variable/facet variable combinations
         # first we get the levels from original dataset
-        var_levels <- with(base_data, levels(get(facet_variable)))
+        var_levels <- with(base_data, levels(get(facet_selected)))
         # get all combinations of the factor name combined with the level name  
         # (in the order that the levels are set)
-        factor_var_combinations <- paste0(facet_variable, var_levels)
+        factor_var_combinations <- paste0(facet_selected, var_levels)
         # expand the counterfactual set to include appropriate combinations of the
         # factor/level columns - all having range(0, 1, 1)
         # first treat the initial counterfactual set explicitly as the x_axis
@@ -219,12 +219,12 @@ get_new_data <- function(exp_data, base_data, model_object,
         # add the x_axis_cuts back in as the first column
         counterfactuals <- data.frame(rep(x_axis_cuts), counterfactuals)
         # label the x_axis_cuts column properly
-        names(counterfactuals)[1] <- x_axis_variable
+        names(counterfactuals)[1] <- x_axis_selected
     } else {
         # if no facet variable, simply expand the counterfactual vector to a
         # one-column dataframe and label the column properly
         counterfactuals <- expand.grid(counterfactuals)
-        names(counterfactuals) <- x_axis_variable
+        names(counterfactuals) <- x_axis_selected
     }
     # finally, we check if there are additional predictors...
     # (the "formula" call ensures we get the actual formula object rather
@@ -239,13 +239,13 @@ get_new_data <- function(exp_data, base_data, model_object,
         # we define a regex search term that will match the x-axis and (if used)
         # facet variables and we drop ALL partial and complete matches
         # (getting rid of any interaction terms as well)
-        if(!is.null(facet_variable)) {
-            retained_index <- !grepl(paste(x_axis_variable, 
-                                           facet_variable, 
+        if(!is.null(facet_selected)) {
+            retained_index <- !grepl(paste(x_axis_selected, 
+                                           facet_selected, 
                                            sep = "|"), 
                                      predictor_names)
         } else {
-            retained_index <- !grepl(x_axis_variable, 
+            retained_index <- !grepl(x_axis_selected, 
                                      predictor_names)
         }
         # we drop all the matches, leaving just the (non-interaction) 
@@ -308,24 +308,24 @@ get_new_data <- function(exp_data, base_data, model_object,
 ###############################################################################
 ## FUNCTIONS TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
 
-format_for_visualization <- function(prediction_object, 
+format_for_visualization <- function(raw_likelihoods, 
                                      model_object, 
                                      base_data,
                                      counterfactuals,
-                                     x_axis_variable, 
-                                     facet_variable = NULL) {
+                                     x_axis_selected, 
+                                     facet_selected = NULL) {
     
     # the mlogit structure is a collection of arrays but ggplot wants dataframes
     # first we extract the arrays as matrices and bind them together
     # NOTE: the lower/upper arrays will have as many dimensions as there are
     #       confidence intervals (here we have 2 dimensions because we ask
     #       for 95 and 50 percent CI in our mlogitsimev call)
-    num_col <- ncol(prediction_object$lower)
-    tidy_sim <- rbind(matrix(prediction_object$lower[, , 1], ncol = num_col),
-                      matrix(prediction_object$lower[, , 2], ncol = num_col),
-                      matrix(prediction_object$upper[, , 1], ncol = num_col),
-                      matrix(prediction_object$upper[, , 2], ncol = num_col),
-                      matrix(prediction_object$pe, ncol = num_col)
+    num_col <- ncol(raw_likelihoods$lower)
+    tidy_sim <- rbind(matrix(raw_likelihoods$lower[, , 1], ncol = num_col),
+                      matrix(raw_likelihoods$lower[, , 2], ncol = num_col),
+                      matrix(raw_likelihoods$upper[, , 1], ncol = num_col),
+                      matrix(raw_likelihoods$upper[, , 2], ncol = num_col),
+                      matrix(raw_likelihoods$pe, ncol = num_col)
     )
     
     # then we format the resulting collection to be properly grouped and
@@ -339,20 +339,20 @@ format_for_visualization <- function(prediction_object,
     tidy_sim$measure_type <- rep(c("lower95", "lower50", 
                                    "upper95", "upper50", 
                                    "pe"), 
-                                 each = nrow(prediction_object$upper))
+                                 each = nrow(raw_likelihoods$upper))
     # we also add the predictor (x-axis) value that will link the unique sets
     # (lower, upper, pe) - this should naturally repeat to the appropriate
     # length
-    tidy_sim$predictor <- rep(counterfactuals[[x_axis_variable]])
+    tidy_sim$predictor <- rep(counterfactuals[[x_axis_selected]])
     # finally, if there is a facet variable set, we also add it as a grouping 
     # variable (create a new summary variable rather than deal with the 
     # already existing columns)
-    if(!is.null(facet_variable)) {
+    if(!is.null(facet_selected)) {
         # we get the levels from the original data object
-        factor_levels <- with(base_data, levels(get(facet_variable)))
+        factor_levels <- with(base_data, levels(get(facet_selected)))
         # the number of repitions of the factor is determined by the length
         # of the x_axis variable / number of unique factor levels
-        num_reps <- nrow(prediction_object$upper) / length(factor_levels)
+        num_reps <- nrow(raw_likelihoods$upper) / length(factor_levels)
         # finally add the grouping variable
         tidy_sim$facet <- rep(factor_levels, each = num_reps)
     }    
@@ -360,7 +360,7 @@ format_for_visualization <- function(prediction_object,
     # collapsing and spreading variables to make visualizing easy
     # (this is a tad arbitrary - it is consisent with Brian's interpretation of
     # good ggplot practice)
-    if(!is.null(facet_variable)) {
+    if(!is.null(facet_selected)) {
         # if a facet variable is set, respect it...
         tidy_sim <- gather(tidy_sim, outcome, likelihood, -measure_type, 
                            -predictor, -facet)    
@@ -375,16 +375,16 @@ format_for_visualization <- function(prediction_object,
     return(tidy_sim)
 }
 
-get_ribbon_plot <- function(formatted_data,
-                            facet_variable = NULL,
+get_ribbon_plot <- function(formatted_likelihoods,
+                            facet_selected = NULL,
                             x_lab = "Predictor", 
                             y_lab = "p(Outcome)",
                             custom_colors = NULL) {
     
     # build the plot object
-    plot_object <- ggplot(formatted_data, aes(x = predictor, y = pe, 
-                                              group = outcome, 
-                                              ymin = lower95, ymax = upper95)) + 
+    plot_object <- ggplot(formatted_likelihoods, aes(x = predictor, y = pe, 
+                                                     group = outcome, 
+                                                     ymin = lower95, ymax = upper95)) + 
         # takes the ymin and ymax and draws a ribbon around the lines
         geom_ribbon(alpha = 0.5, aes(fill = outcome)) + 
         geom_ribbon(alpha = 0.5, aes(fill = outcome,
@@ -393,17 +393,22 @@ get_ribbon_plot <- function(formatted_data,
         scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
         theme_bw() +
         theme(panel.grid.minor = element_blank(), 
-              panel.grid.major = element_blank()) +
+              panel.grid.major = element_blank(),
+              strip.text = element_text(color = "white")) +
         xlab(x_lab) +
         ylab(y_lab)
     
     # if custom colors are provided, adjust the color scale
     if(!is.null(custom_colors)) {
-        plot_object <- plot_object + scale_fill_manual(values = custom_colors)
+        plot_object <- plot_object + 
+            scale_fill_manual(values = custom_colors) +
+            theme(strip.background = element_rect(color = custom_colors[8], 
+                                                  fill = custom_colors[8]),
+                  panel.border = element_rect(color = custom_colors[8]))
     }
     
     # if a facet variable is set, add the facet layer to the plot object
-    if(!is.null(facet_variable)) {
+    if(!is.null(facet_selected)) {
         plot_object <- plot_object + facet_wrap(~ facet, ncol = 2)
     }
     
@@ -416,7 +421,7 @@ get_ribbon_plot <- function(formatted_data,
 # OUT OF DATE - REVIEW BEFORE TRYING TO USE
 
 test_wrapper <- function(dataset, model_object, 
-                         x_axis_variable, facet_variable = NULL,
+                         x_axis_selected, facet_selected = NULL,
                          coeff_sample_size = 1000) {
     # create the supporting objects
     pe <- get_point_estimates(model_object)
@@ -424,14 +429,14 @@ test_wrapper <- function(dataset, model_object,
     ce <- get_coefficient_estimates(coeff_sample_size, pe, cvm, 
                                     model_object)
     nd <- get_new_data(dataset, model_object, 
-                       x_axis_variable, facet_variable = facet_variable)
+                       x_axis_selected, facet_selected = facet_selected)
     
     # generate the predictions
-    prediction_object <- mlogitsimev(nd, ce, ci = 0.67)
+    raw_likelihoods <- mlogitsimev(nd, ce, ci = 0.67)
     
     # generate the plot object
-    plot_object <- visualize_predictions(prediction_object, model_object, 
-                                         nd, x_axis_variable, facet_variable)
+    plot_object <- visualize_predictions(raw_likelihoods, model_object, 
+                                         nd, x_axis_selected, facet_selected)
     # return the plot object
     return(plot_object)
 }
@@ -444,12 +449,12 @@ test_wrapper <- function(dataset, model_object,
 # given a slider. However, 'auto' mode can be turned on and - so long as 
 # the outcome_variable is provided - the function will generate sliders
 # intelligently (but inefficiently) from the data itself.
-get_sliders <- function(x_axis_selected,
-                        slider_raw_names,
-                        slider_pretty_names = NA,
-                        base_data,
-                        auto = FALSE, 
-                        outcome_variable = NULL) {
+define_sliders <- function(x_axis_selected,
+                           slider_raw_names,
+                           slider_pretty_names = NA,
+                           base_data,
+                           auto = FALSE, 
+                           outcome_variable = NULL) {
     
     if(auto) {
         # make index of variables in the base dataset which are NOT factors
@@ -468,8 +473,8 @@ get_sliders <- function(x_axis_selected,
     }
     
     # set the x-axis variable to FALSE in the index
-    x_axis_variable <- grepl(x_axis_selected, names(slider_index))
-    slider_index[x_axis_variable] <- FALSE
+    x_axis_position <- grepl(x_axis_selected, names(slider_index))
+    slider_index[x_axis_position] <- FALSE
     
     # create a dataframe with just the retained slider variables
     slider_selections <- base_data[slider_index]
@@ -496,8 +501,8 @@ get_sliders <- function(x_axis_selected,
     # if pretty names were given, add these to the features...
     if(!is.na(slider_pretty_names)) {
         # but first have to drop out the x-axis variable again
-        x_axis_variable <- grepl(x_axis_selected, slider_raw_names)
-        slider_pretty_names <- slider_pretty_names[!x_axis_variable]
+        x_axis_position <- grepl(x_axis_selected, slider_raw_names)
+        slider_pretty_names <- slider_pretty_names[!x_axis_position]
         # then assign the pretty names
         slider_features$var_pretty_name <- slider_pretty_names
     }

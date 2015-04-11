@@ -81,7 +81,7 @@ shinyServer(function(input, output, session) {
     # create fixed user inputs
     # all are reactive objects so that updates to these can be relied on to
     # update any dependencies
-    x_axis_selected <- reactive({
+    x_axis_raw_name <- reactive({
         #browser()
         # filter the variable_configuration dataframe for the row with the
         # matching UI name, extract the column name
@@ -90,7 +90,7 @@ shinyServer(function(input, output, session) {
                                ]$raw_name
     })
     
-    facet_selected <- reactive({
+    facet_raw_name <- reactive({
         #browser()
         # filter the variable_configuration dataframe for the row with the
         # matching UI name, extract the column name
@@ -104,117 +104,105 @@ shinyServer(function(input, output, session) {
         }
     })
     
-    x_label <- reactive({
-        #browser()
-        # not necessary to define this - mostly done so that all my inputs are
-        # nicely stated at one spot in my code
-        input$x_axis_choice
-    })
-    
     # generate representative data to feed coefficients
-    new_data <- reactive({
+    new_data_initial <- reactive({
         #browser()
         get_new_data(exp_data,
                      base_data,
                      exp_model, 
-                     x_axis_selected(), 
-                     facet_variable = facet_selected())
+                     x_axis_raw_name(), 
+                     facet_selected = facet_raw_name())
     })
     
     # generate dynamic UI features (non-x-axis predictor adjustments) and
     # set their default values
-    slider_set <- reactive({
+    slider_set_definition <- reactive({
         #browser()
-        get_sliders(x_axis_selected = x_axis_selected(), 
-                    slider_raw_names = slider_options$raw_name, 
-                    slider_pretty_names = slider_options$pretty_name, 
-                    base_data = base_data, 
-                    auto = FALSE, 
-                    outcome_variable = outcome_variable)
+        define_sliders(x_axis_selected = x_axis_raw_name(), 
+                       slider_raw_names = slider_options$raw_name, 
+                       slider_pretty_names = slider_options$pretty_name, 
+                       base_data = base_data, 
+                       auto = FALSE, 
+                       outcome_variable = outcome_variable)
     })
     
-    output$fixed_predictors <- renderUI({
+    output$slider_set <- renderUI({
         #browser()
         # check if pretty names are available - use them if they are or 
         # simply use the raw column names
-        if("var_pretty_name" %in% names(slider_set())) {
-            label_name <- slider_set()$var_pretty_name
+        if("var_pretty_name" %in% names(slider_set_definition())) {
+            label_name <- slider_set_definition()$var_pretty_name
         } else {
-            label_name <- toupper(slider_set()$var_raw_name)
+            label_name <- toupper(slider_set_definition()$var_raw_name)
         }
-        # collect the initial values for the sliders from the new_data object
-        start_values <- new_data()[slider_set()$var_raw_name][1,]
+        # collect the initial values for the sliders from the new_data_initial object
+        start_values <- isolate(new_data_initial())[slider_set_definition()$var_raw_name][1,]
         
         # generate the sliders
-        lapply(1:nrow(slider_set()), function(i) {
-            sliderInput(inputId = slider_set()$var_raw_name[i], 
+        lapply(1:nrow(slider_set_definition()), function(i) {
+            sliderInput(inputId = slider_set_definition()$var_raw_name[i], 
                         label = label_name[i],
-                        min = slider_set()$var_min[i], 
-                        max = slider_set()$var_max[i],
+                        min = slider_set_definition()$var_min[i], 
+                        max = slider_set_definition()$var_max[i],
                         value = start_values[[i]],
                         step = 0.001)
         })
     })
     
     # update the new data with inputs from the sliders
-    new_data_fixed <- reactive({
+    new_data_updated <- reactive({
         #browser()
-        # conditions under which new_data_fixed will get regenerated
-        # (important since we isolate the source new_data object itself)
-        # NOTE: this also updates any time one of the relevant sliders is
-        #       adjusted since those are reactive objects referenced below
-        #       without any isolation (i.e., input[[current_var]])
-        x_axis_selected()
-        facet_selected()
-        
-        # isolate the current new_data object
-        new_data_initial <- isolate(new_data())
+        # get the current representative data from new_data_initial()
+        # NOTE: this also establishes the key reactive link - new_data_updated
+        #       will only re-execute if
+        #       1. the value of new_data_initial() reactive expression changes
+        #          OR
+        #       2. the value of one of the sliders (reactive sources defined
+        #          by the output$slider_set observer) changes
+        new_data_initial_initial <- new_data_initial()
         
         # update the values based on current slider inputs
-        for(i in 1:nrow(slider_set())) {
-            current_var <- slider_set()$var_raw_name[i]
+        for(i in 1:nrow(isolate(slider_set_definition()))) {
+            current_var <- isolate(slider_set_definition()$var_raw_name[i])
             # all the input variables initialize as "NULL" - we want to avoid
             # working with them until they've been assigned a value
+            # NOTE: input[[current_var]] IS a reactive link (actually a flexible 
+            #       set of reactive links) - it links to the sliders dynamically 
+            #       generated by the output$slider_set observer
             if(!is.null(input[[current_var]])) {
-                new_data_initial[current_var] <- input[[current_var]]
+                new_data_initial_initial[current_var] <- input[[current_var]]
             }
         }
         
-        return(new_data_initial)
+        return(new_data_initial_initial)
     })
     
     # feed the representative data to the sampled coefficients to generate
     # our final simulated outcome likelihoods
-    prediction_object <- reactive({
+    likelihoods <- reactive({
         #browser()
-        mlogitsimev_med(new_data_fixed(), 
-                        coeff_estimates, 
-                        ci = c(0.95, 0.50))
-    })
-    
-    # format the simulated outcome likelihoods for visualization
-    formatted_data <- reactive({
-        #browser()
-        format_for_visualization(prediction_object(),
+        likelihoods_raw <- mlogitsimev_med(new_data_updated(), 
+                                           coeff_estimates, 
+                                           ci = c(0.95, 0.50))
+        # format the simulated outcome likelihoods for visualization
+        format_for_visualization(likelihoods_raw,
                                  exp_model,
                                  base_data,
-                                 new_data_fixed(),
-                                 x_axis_selected(),
-                                 facet_variable = facet_selected()
-        )
+                                 isolate(new_data_updated()),
+                                 isolate(x_axis_raw_name()),
+                                 facet_selected = isolate(facet_raw_name()))
     })
     
     # visualize the outcome likelihoods
     output$ribbon_plot <- renderPlot({
         #browser()
-        get_ribbon_plot(formatted_data(), 
-                        facet_variable = facet_selected(),
+        get_ribbon_plot(likelihoods(), 
+                        facet_selected = isolate(facet_raw_name()),
                         y_lab = "Probability", 
-                        x_lab = x_label(),
-                        custom_colors = rage_colors
+                        x_lab = isolate(input$x_axis_choice),
+                        custom_colors = portal_colors
         )
     })
-    
 })
 
 
