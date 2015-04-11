@@ -24,6 +24,11 @@ Source: CRAN
 Version: 1.1-2
 Hash: 5203278413b09be06483c5ac1920bb05
 
+Package: RODBC
+Source: CRAN
+Version: 1.3-11
+Hash: 2b21fbdff5b5f60d94ec076308fee2af
+
 Package: Rcpp
 Source: CRAN
 Version: 0.11.5
@@ -51,6 +56,16 @@ Source: CRAN
 Version: 0.1
 Hash: 4b419cfdc33a3019a7f3c6f0cdea6c38
 
+Package: bitops
+Source: CRAN
+Version: 1.0-6
+Hash: cb26464a8321628636b547518994c931
+
+Package: caTools
+Source: CRAN
+Version: 1.17.1
+Requires: bitops
+
 Package: coda
 Source: CRAN
 Version: 0.17-1
@@ -77,6 +92,17 @@ Version: 0.4.1
 Hash: 3bcfd4ae622d206d1f0cd9f1c759846d
 Requires: BH, DBI, R6, Rcpp, assertthat, lazyeval, magrittr
 
+Package: evaluate
+Source: CRAN
+Version: 0.5.5
+Hash: 20881970e590ee68de97a468694db7b0
+Requires: stringr
+
+Package: formatR
+Source: CRAN
+Version: 1.1
+Hash: 8d2a06a106150308bffdd6e669669c0c
+
 Package: ggplot2
 Source: CRAN
 Version: 1.0.1
@@ -87,6 +113,23 @@ Package: gtable
 Source: CRAN
 Version: 0.1.2
 Hash: 0cf4a2b54c02b35dec7e74a8ebed12a0
+
+Package: highr
+Source: CRAN
+Version: 0.4.1
+Hash: 6845341309f2bcd75a7ba4c3237cbd0f
+
+Package: htmltools
+Source: CRAN
+Version: 0.2.6
+Hash: 2c87108d130de261ac3c468d3316ae42
+Requires: digest
+
+Package: knitr
+Source: CRAN
+Version: 1.9
+Hash: 41c29594ced4d02b3b90b4c375680cd3
+Requires: digest, stringr, evaluate, formatR, highr, markdown
 
 Package: labeling
 Source: CRAN
@@ -104,16 +147,44 @@ Version: 1.1-7
 Hash: 9d18cc3c929838ccdef3bdab917caa9a
 Requires: Rcpp, RcppEigen, minqa, nloptr
 
+Package: lubridate
+Source: CRAN
+Version: 1.3.3
+Hash: f19612b23b1b15febdf30ee920a6e7df
+Requires: stringr, plyr, memoise
+
 Package: magrittr
 Source: CRAN
 Version: 1.5
 Hash: 38d492cf072bc9f3c73bda2aee3d0e23
+
+Package: markdown
+Source: CRAN
+Version: 0.7.4
+Hash: 01d7f71ed6e3d9b1c17ba51cff91be72
+Requires: mime
+
+Package: memoise
+Source: CRAN
+Version: 0.2.1
+Hash: fc52fa39dfd216c44d64812ff31b1c67
+Requires: digest
+
+Package: mime
+Source: CRAN
+Version: 0.2
+Hash: 9179db921fcb2e5be44e217042ed06bc
 
 Package: minqa
 Source: CRAN
 Version: 1.2.4
 Hash: 458796870f58fde96e824382cc0e8d82
 Requires: Rcpp
+
+Package: mnormt
+Source: CRAN
+Version: 1.5-2
+Hash: 483c576a9691823320064b1123ae3159
 
 Package: munsell
 Source: CRAN
@@ -131,6 +202,12 @@ Source: CRAN
 Version: 0.4.3
 Hash: 16c72d5c802629fae5a4abca901e0199
 
+Package: pander
+Source: CRAN
+Version: 0.5.1
+Hash: 8a1a930fa3eec8482561e9be5a562fc1
+Requires: Rcpp, digest
+
 Package: plyr
 Source: CRAN
 Version: 1.8.1
@@ -142,11 +219,22 @@ Source: CRAN
 Version: 0.3-10
 Hash: 668a9e87cedbdc5f56c396edf1bd2648
 
+Package: psych
+Source: CRAN
+Version: 1.5.1
+Hash: 3c4ed6c2edad0374184a98cc0815d7e4
+Requires: mnormt
+
 Package: reshape2
 Source: CRAN
 Version: 1.4.1
 Hash: d3d77b083fd5485f674487aa23011ea7
 Requires: Rcpp, plyr, stringr
+
+Package: rmarkdown
+Source: CRAN
+Version: 0.5.1
+Requires: caTools, htmltools, knitr, yaml
 
 Package: scales
 Source: CRAN
@@ -162,7 +250,6 @@ GithubRepo: tile-simcf
 GithubUsername: chrisadolph
 GithubRef: master
 GithubSha1: 655584423a47dffa838d7e4bd863ac28461712f2
-GithubSubdir: simcf
 
 Package: stringi
 Source: CRAN
@@ -179,3 +266,7 @@ Source: CRAN
 Version: 0.2.0
 Hash: 3b379415e9e88d4f559b380819893304
 Requires: dplyr, lazyeval, reshape2, stringi
+
+Package: yaml
+Source: CRAN
+Version: 2.1.13
