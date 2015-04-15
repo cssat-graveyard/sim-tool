@@ -61,7 +61,7 @@ variable_configuration <<- list(
 )
 
 
-# provide the POC colors and which colors to use for various visualizations
+# provide the POC colors
 poc_colors <<- c("#3B6E8F", "#A2B69A", "#A3DCE6", "#A784B4")
 portal_colors <<- c("#D9BB32", "#6DB33F", "#6E9CAE", "#B1662B", "#5B8067", 
                     "#444D3E", "#994D3E", "#10475B", "#7D6E86", "#D47079", 
@@ -89,45 +89,64 @@ slider_options <<- filter(variable_configuration, ui_role == "x-axis + slider")
 ###############################################################################
 ## SHINY UI LOOP
 
-shinyUI(fluidPage(
-    # settings for the entire page
-    titlePanel("SimTool Demo"),
+shinyUI(navbarPage(
+    "The Case Outcome Simulator",
     
-    # define user tools in the first column
-    # width = 3 of 12 (Shiny divides the horizontal space up into 12 sections)
-    column(3, 
-           wellPanel(               
-               radioButtons("x_axis_choice", label = h3("Select X-Axis"), 
-                            choices = x_axis_options),
-               
-               radioButtons("facet_choice", 
-                            label = h3("Facet Choice"),
-                            choices = c("None", facet_options))
-           ),
-           
-           wellPanel(
-               helpText("Adjust fixed (non-x-axis) predictors."), 
-               
-               checkboxInput("slider_show", 
-                             label = "Show sliders?",
-                             FALSE),
-               
-               conditionalPanel(
-                   condition = "input.slider_show == true",
+    # using COS to explore across a range ("Explore Mode")
+    tabPanel("Explore Mode", fluidPage(
+        # define user tools in the first column
+        # width = 3 of 12 (Shiny divides the horizontal space up into 12 sections)
+        column(3, 
+               wellPanel(               
+                   radioButtons("x_axis_choice", label = h3("Select X-Axis"), 
+                                choices = x_axis_options),
                    
-                   actionButton("use_slider_values",
-                                "Update Plot"),
+                   radioButtons("facet_choice", 
+                                label = h3("Facet Choice"),
+                                choices = c("None", facet_options))
+               ),
+               
+               wellPanel(
+                   helpText("Adjust fixed (non-x-axis) predictors."), 
                    
-                   uiOutput("slider_set")
+                   checkboxInput("slider_show", 
+                                 label = "Show sliders?",
+                                 FALSE),
+                   
+                   conditionalPanel(
+                       condition = "input.slider_show == true",
+                       
+                       actionButton("use_slider_values",
+                                    "Update Plot"),
+                       
+                       uiOutput("slider_set")
+                   )
                )
-           )
-    ),
+        ),
+        
+        # define the visualization in the second column
+        # width = 9 of 12
+        column(9, 
+               plotOutput("ribbon_plot")
+        )
+    )),
     
-    # define the visualization in the second column
-    # width = 9 of 12
-    column(9, 
-           plotOutput("ribbon_plot")
-    )
+    tabPanel("Single Case Mode", fluidPage(
+        column(3, 
+               wellPanel(
+                   actionButton("update_sc_new_data",
+                                "Get Simulated Outcome"),
+                   
+                   helpText("Adjust predictors."),
+                   
+                   uiOutput("sc_slider_set")
+               )
+        ),
+        
+        column(9,
+               plotOutput("single_case_plot")
+        )
+    ))
 ))
 
 ###############################################################################

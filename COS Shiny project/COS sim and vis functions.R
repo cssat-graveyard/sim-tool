@@ -312,7 +312,7 @@ format_for_visualization <- function(raw_likelihoods,
                                      model_object, 
                                      base_data,
                                      counterfactuals,
-                                     x_axis_selected, 
+                                     x_axis_selected = NA, 
                                      facet_selected = NULL) {
     
     # the mlogit structure is a collection of arrays but ggplot wants dataframes
@@ -340,10 +340,16 @@ format_for_visualization <- function(raw_likelihoods,
                                    "upper95", "upper50", 
                                    "pe"), 
                                  each = nrow(raw_likelihoods$upper))
+    # if available,
     # we also add the predictor (x-axis) value that will link the unique sets
     # (lower, upper, pe) - this should naturally repeat to the appropriate
     # length
-    tidy_sim$predictor <- rep(counterfactuals[[x_axis_selected]])
+    if(!is.na(x_axis_selected)) {
+        tidy_sim$predictor <- rep(counterfactuals[[x_axis_selected]])
+    } else {
+        # if no x-axis given, we just slap on a row-count
+        tidy_sim$predictor <- rep(1:nrow(counterfactuals))
+    }
     # finally, if there is a facet variable set, we also add it as a grouping 
     # variable (create a new summary variable rather than deal with the 
     # already existing columns)
@@ -420,6 +426,45 @@ get_ribbon_plot <- function(formatted_likelihoods,
     return(plot_object)
 }
 
+get_single_case_plot <- function(formatted_likelihoods,
+                            x_lab = "Predictor", 
+                            y_lab = "p(Outcome)",
+                            custom_colors = NULL) {
+    browser()
+    # build the plot object
+    plot_object <- ggplot(formatted_likelihoods, aes(x = predictor, y = pe, 
+                                                     group = outcome, 
+                                                     ymin = lower95, ymax = upper95)) + 
+        # takes the ymin and ymax and draws a ribbon around the lines
+        geom_ribbon(alpha = 0.5, aes(fill = outcome)) + 
+        geom_ribbon(alpha = 0.5, aes(fill = outcome,
+                                     ymin = lower50, ymax = upper50)) +
+        #geom_line(aes(color = outcome)) +
+        scale_y_continuous(limits = c(0, 1),
+                           labels = scales::percent,
+                           expand = c(0, 0)) +
+        scale_x_continuous(expand = c(0, 0)) +
+        theme_bw() +
+        theme(panel.grid.minor = element_blank(), 
+              panel.grid.major = element_blank(),
+              strip.text = element_text(color = "white")) +
+        xlab(x_lab) +
+        ylab(y_lab)
+    
+    # if custom colors are provided, adjust the color scale
+    if(!is.null(custom_colors)) {
+        plot_object <- plot_object + 
+            scale_fill_manual(values = custom_colors) +
+            theme(strip.background = element_rect(color = custom_colors[8], 
+                                                  fill = custom_colors[8]),
+                  panel.border = element_rect(color = custom_colors[8]),
+                  axis.ticks = element_line(color = custom_colors[8]))
+    }
+    
+    # return the plot object
+    return(plot_object)
+}
+
 ###############################################################################
 ## TEST WRAPPER
 # OUT OF DATE - REVIEW BEFORE TRYING TO USE
@@ -453,7 +498,7 @@ test_wrapper <- function(dataset, model_object,
 # given a slider. However, 'auto' mode can be turned on and - so long as 
 # the outcome_variable is provided - the function will generate sliders
 # intelligently (but inefficiently) from the data itself.
-define_sliders <- function(x_axis_selected,
+define_sliders <- function(x_axis_selected = NA,
                            slider_raw_names,
                            slider_pretty_names = NA,
                            base_data,
@@ -476,9 +521,12 @@ define_sliders <- function(x_axis_selected,
         names(slider_index) <- names(base_data)
     }
     
-    # set the x-axis variable to FALSE in the index
-    x_axis_position <- grepl(x_axis_selected, names(slider_index))
-    slider_index[x_axis_position] <- FALSE
+    # if an x-axis variable has been provided, then set the x-axis variable
+    # to FALSE in the index so that it is not included as a slider
+    if(!is.na(x_axis_selected)) {
+        x_axis_position <- grepl(x_axis_selected, names(slider_index))
+        slider_index[x_axis_position] <- FALSE
+    }
     
     # create a dataframe with just the retained slider variables
     slider_selections <- base_data[slider_index]
@@ -504,9 +552,11 @@ define_sliders <- function(x_axis_selected,
     
     # if pretty names were given, add these to the features...
     if(!is.na(slider_pretty_names)) {
-        # but first have to drop out the x-axis variable again
-        x_axis_position <- grepl(x_axis_selected, slider_raw_names)
-        slider_pretty_names <- slider_pretty_names[!x_axis_position]
+        # but first check if we have to drop out the x-axis variable again
+        if(!is.na(x_axis_selected)) {
+            x_axis_position <- grepl(x_axis_selected, slider_raw_names)
+            slider_pretty_names <- slider_pretty_names[!x_axis_position]
+        }
         # then assign the pretty names
         slider_features$var_pretty_name <- slider_pretty_names
     }
