@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/25/2015
-# Date updated: 4/8/2015
+# Date updated: 4/14/2015
 
 # NOTE: Functions were largely developed in the "gator model example V3.R"
 #       script. That script was archived to allow us to seperate the model
@@ -390,7 +390,10 @@ get_ribbon_plot <- function(formatted_likelihoods,
         geom_ribbon(alpha = 0.5, aes(fill = outcome,
                                      ymin = lower50, ymax = upper50)) +
         #geom_line(aes(color = outcome)) +
-        scale_y_continuous(limits = c(0, 1), labels = scales::percent) +
+        scale_y_continuous(limits = c(0, 1),
+                           labels = scales::percent,
+                           expand = c(0, 0)) +
+        scale_x_continuous(expand = c(0, 0)) +
         theme_bw() +
         theme(panel.grid.minor = element_blank(), 
               panel.grid.major = element_blank(),
@@ -404,7 +407,8 @@ get_ribbon_plot <- function(formatted_likelihoods,
             scale_fill_manual(values = custom_colors) +
             theme(strip.background = element_rect(color = custom_colors[8], 
                                                   fill = custom_colors[8]),
-                  panel.border = element_rect(color = custom_colors[8]))
+                  panel.border = element_rect(color = custom_colors[8]),
+                  axis.ticks = element_line(color = custom_colors[8]))
     }
     
     # if a facet variable is set, add the facet layer to the plot object

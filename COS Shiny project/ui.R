@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 4/8/2015
+# Date updated: 4/14/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -13,17 +13,26 @@
 #       at all.)
 
 # sketch of script
+# - Load Supporting Libraries
+#   - anything that might fail if the script needs to wait for server.R to load
+#
 # - Configuration Settings
 #   - where the admin defines the roles of the model variables and some other
 #     basic information
 #   - also provide the POC color scheme to be called during plot creation
+#
 # - Configuration Processing
 #   - the provided settings are processed so they are ready to be used with
 #     the Shiny UI Loop and the simulation/visualization functions
+#
 # - Shiny UI Loop
 #   - page settings
 #   - define the user tools
 #   - define the visualization
+
+###############################################################################
+## LOAD SUPPORTING LIBRARIES
+library(dplyr)      # serves various formatting needs
 
 ###############################################################################
 ## CONFIGURATION SETTINGS
@@ -97,9 +106,20 @@ shinyUI(fluidPage(
            ),
            
            wellPanel(
-               helpText("Adjust fixed (non-x-axis) predictors."),
+               helpText("Adjust fixed (non-x-axis) predictors."), 
                
-               uiOutput("slider_set")
+               checkboxInput("slider_show", 
+                             label = "Show sliders?",
+                             FALSE),
+               
+               conditionalPanel(
+                   condition = "input.slider_show == true",
+                   
+                   actionButton("use_slider_values",
+                                "Update Plot"),
+                   
+                   uiOutput("slider_set")
+               )
            )
     ),
     
