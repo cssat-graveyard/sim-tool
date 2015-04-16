@@ -116,10 +116,10 @@ shinyUI(navbarPage(
                    conditionalPanel(
                        condition = "input.slider_show == true",
                        
-                       actionButton("use_slider_values",
-                                    "Update Plot"),
+                       actionButton("update_explore_data",
+                                    "Update"),
                        
-                       uiOutput("slider_set")
+                       uiOutput("explore_slider_set")
                    )
                )
         ),
@@ -134,8 +134,8 @@ shinyUI(navbarPage(
     tabPanel("Single Case Mode", fluidPage(
         column(3, 
                wellPanel(
-                   actionButton("update_sc_new_data",
-                                "Get Simulated Outcome"),
+                   actionButton("update_sc_data",
+                                "Update"),
                    
                    helpText("Adjust predictors."),
                    
@@ -144,7 +144,9 @@ shinyUI(navbarPage(
         ),
         
         column(9,
-               plotOutput("single_case_plot")
+            plotOutput("error_bar_plot"),
+            
+            plotOutput("dot_cloud_plot")
         )
     ))
 ))

@@ -22,6 +22,14 @@
 #          simulation and avoids issues that arise as confidence intervals get
 #          narrow (e.g., the mean falling outside the upper and lower 
 #          quartiles).
+#       2. Allows the user to request the "cloud" that results from feeding
+#          the represenative data to the coefficient estimates. This prevents
+#          the normal function behavior, which returns a summary of these 
+#          results for each case in the representative data.
+#       3. Adjusts order of the outcome columns to match intuitive expectations
+#          (reference outcome is ordered as the FIRST column rather than LAST).
+#          Originally, the reference outcome was ordered as the LAST column, but
+#          in most models/outputs the reference outcome is ordered FIRST.
 
 # sketch of script
 # - the function as written by Chris Adolph
@@ -31,7 +39,10 @@
 ## STEP
 
 mlogitsimev_med <- function (x, b, ci = 0.95, constant = 1, z = NULL, g = NULL, 
-                             predict = FALSE, sims = 10) 
+                             predict = FALSE, sims = 10, 
+                             ## REVISION ##
+                             # added return_cloud argument
+                             return_cloud = FALSE) 
 {
     if (!is.array(b)) {
         stop("b must be an array")
@@ -112,6 +123,17 @@ mlogitsimev_med <- function (x, b, ci = 0.95, constant = 1, z = NULL, g = NULL,
         else simy[, ncol(simy)] <- 1/simdenom
         
         simy <- apply(simy, 2, sort)
+        
+        ## REVISION ##
+        # reorder columns so the REFERENCE OUTCOME is now the FIRST column
+        simy <- simy[, c(4, 1:3)]
+        
+        
+        ## REVISION ##
+        # return the cloud of estimates if requested
+        if(return_cloud) {
+            return(simy)
+        }
         
         ## REVISION ##
         # technique for calculating point estimate (pe) changed from mean to

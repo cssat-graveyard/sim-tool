@@ -426,35 +426,66 @@ get_ribbon_plot <- function(formatted_likelihoods,
     return(plot_object)
 }
 
-get_single_case_plot <- function(formatted_likelihoods,
-                            x_lab = "Predictor", 
+get_error_bar_plot <- function(formatted_likelihoods,
+                            x_lab = "Outcome", 
                             y_lab = "p(Outcome)",
                             custom_colors = NULL) {
-    browser()
     # build the plot object
-    plot_object <- ggplot(formatted_likelihoods, aes(x = predictor, y = pe, 
-                                                     group = outcome, 
-                                                     ymin = lower95, ymax = upper95)) + 
-        # takes the ymin and ymax and draws a ribbon around the lines
-        geom_ribbon(alpha = 0.5, aes(fill = outcome)) + 
-        geom_ribbon(alpha = 0.5, aes(fill = outcome,
-                                     ymin = lower50, ymax = upper50)) +
-        #geom_line(aes(color = outcome)) +
+    plot_object <- ggplot(formatted_likelihoods, 
+                          aes(x = outcome, 
+                              color = outcome)) + 
+        geom_errorbar(aes(ymin = lower50, ymax = upper50)) +
+        geom_errorbar(aes(ymin = lower95, ymax = upper95,
+                          width = 0.5)) +
         scale_y_continuous(limits = c(0, 1),
-                           labels = scales::percent,
-                           expand = c(0, 0)) +
-        scale_x_continuous(expand = c(0, 0)) +
+                           labels = scales::percent) +
         theme_bw() +
         theme(panel.grid.minor = element_blank(), 
               panel.grid.major = element_blank(),
               strip.text = element_text(color = "white")) +
+        theme(legend.position="none") +
         xlab(x_lab) +
-        ylab(y_lab)
+        ylab(y_lab) +
+        coord_flip()
     
     # if custom colors are provided, adjust the color scale
     if(!is.null(custom_colors)) {
         plot_object <- plot_object + 
-            scale_fill_manual(values = custom_colors) +
+            scale_color_manual(values = custom_colors) +
+            theme(strip.background = element_rect(color = custom_colors[8], 
+                                                  fill = custom_colors[8]),
+                  panel.border = element_rect(color = custom_colors[8]),
+                  axis.ticks = element_line(color = custom_colors[8]))
+    }
+    
+    # return the plot object
+    return(plot_object)
+}
+
+get_dot_cloud_plot <- function(formatted_likelihoods,
+                               x_lab = "Outcome", 
+                               y_lab = "p(Outcome)",
+                               custom_colors = NULL) {
+    # build the plot object
+    plot_object <- ggplot(formatted_likelihoods, 
+                          aes(x = outcome, y = single_pe,
+                              color = outcome, alpha = 0.10)) + 
+        geom_jitter(position = position_jitter(width = 0.25, height = 0)) +
+        scale_y_continuous(limits = c(0, 1),
+                           labels = scales::percent) +
+        theme_bw() +
+        theme(panel.grid.minor = element_blank(), 
+              panel.grid.major = element_blank(),
+              strip.text = element_text(color = "white")) +
+        theme(legend.position="none") +
+        xlab(x_lab) +
+        ylab(y_lab) +
+        coord_flip()
+    
+    # if custom colors are provided, adjust the color scale
+    if(!is.null(custom_colors)) {
+        plot_object <- plot_object + 
+            scale_color_manual(values = custom_colors) +
             theme(strip.background = element_rect(color = custom_colors[8], 
                                                   fill = custom_colors[8]),
                   panel.border = element_rect(color = custom_colors[8]),
