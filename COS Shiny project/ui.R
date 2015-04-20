@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 4/14/2015
+# Date updated: 4/20/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -37,54 +37,137 @@ library(dplyr)      # serves various formatting needs
 ###############################################################################
 ## CONFIGURATION SETTINGS
 
-# provide key variable information (in this order, as strings)
-# - the user-friendly name of the variable
-# - the raw name of the variable (dataset column name)
-# - what role the variable plays in the model (outcome or predictor)
-# - what role the variable should play in the visualization (x-axis, x-axis + 
-#   slider, facet)
-variable_configuration <<- list(
-    c("Parent Mistrust", "mist_scores", 
-      "predictor", "x-axis + slider"),
-    c("Parent Working Score", "wrkg_scores", 
-      "predictor", "x-axis + slider"),
-    c("Parent Receptivity", "recep_scores", 
-      "predictor", "x-axis + slider"),
-    c("Parent Buy-in", "buyn_scores", 
-      "predictor", "x-axis + slider"),
-    c("Age at Removal (log)", "log_age_eps_begin", 
-      "predictor", "x-axis + slider"),
-    c("Count of Housing Hardships", "housing_hs_cnt", 
-      "predictor", "x-axis + slider"),
-    c("Region", "REG", 
-      "predictor", "facet")
+# the following features must be specified for every model variable that will
+# be visible to the user (as an outcome, slider, or facet)
+# variable_configuration <<- list(
+#     RAW_NAME = list(
+#         pretty_name         = UI_FRIENDLY_NAME,
+#         x_axis_candiate     = TRUE OR FALSE (WHEN APPROPRIATE, MAKE ALLOW
+#                               VARIABLE TO BE PREPARED FOR AND PRESENTED ON
+#                               PLOT X-AXIS),
+#         slider_candidate    = TRUE OR FALSE (WHEN APPROPRIATE, MAKE A SLIDER)
+#         slider_rounding     = NUMBER (E.G., 1 WILL FORCE THE SLIDER TO SNAP TO
+#                               WHOLE NUMBERS AS IT IS BEING MOVED); DEFAULTS TO
+#                               0.1 IF NA,
+#         facet_candidate     = TRUE OR FALSE (WHEN APPROPRIATE, ALLOW FACET - 
+#                               WILL FORCE VARIABLE TO FACTOR),
+#         transform_for_ui    = USE "identity" AS DEFAULT; BUT IF VARIABLE NEEDS
+#                               TO BE TRANSFORMED FOR USER PRESENTATION, DEFINE
+#                               THE TRANSFORM FUNCTION HERE,
+#         transform_for_model = USE "identity" AS DEFAULT; SPECIFY FUNCTION
+#                               IF UI INPUT NEEDS TO BE TRANSFORMED BACK BEFORE
+#                               USED IN THE MODEL,
+#     ),
+#     ...
+# )
+variable_configuration <<- list(   
+    mist_scores = list(
+        pretty_name         = "Parent Mistrust",
+        x_axis_candidate    = TRUE,
+        slider_candidate    = TRUE,
+        slider_rounding     = NA,
+        facet_candidate     = FALSE,
+        transform_for_ui    = function(x) x + 3,
+        transform_for_model = function(x) x - 3
+    ),    
+    wrkg_scores = list(
+        pretty_name         = "Parent Working Score",
+        x_axis_candidate    = TRUE,    
+        slider_candidate    = TRUE,
+        slider_rounding     = NA,
+        facet_candidate     = FALSE,
+        transform_for_ui    = function(x) x + 3,
+        transform_for_model = function(x) x - 3
+    ),   
+    recep_scores = list(
+        pretty_name         = "Parent Receptivity",
+        x_axis_candidate    = TRUE,
+        slider_candidate    = TRUE,
+        slider_rounding     = NA,
+        facet_candidate     = FALSE,
+        transform_for_ui    = function(x) x + 3,
+        transform_for_model = function(x) x - 3
+    ),    
+    buyn_scores = list(
+        pretty_name         = "Parent Buy-in",
+        x_axis_candidate    = TRUE,
+        slider_candidate    = TRUE,
+        slider_rounding     = NA,
+        facet_candidate     = FALSE,
+        transform_for_ui    = function(x) x + 3,
+        transform_for_model = function(x) x - 3
+    ),    
+    log_age_eps_begin = list(
+        pretty_name         = "Age at Start of Episode",
+        x_axis_candidate    = TRUE,
+        slider_candidate    = TRUE,
+        slider_rounding     = 1,
+        facet_candidate     = FALSE,
+        transform_for_ui    = function(x) exp(x) - 1,
+        transform_for_model = log1p
+    ),  
+    housing_hs_cnt = list(
+        pretty_name         = "Count of Housing Hardships",
+        x_axis_candidate    = TRUE,
+        slider_candidate    = TRUE,
+        slider_rounding     = 1,
+        facet_candidate     = TRUE,
+        transform_for_ui    = identity,
+        transform_for_model = identity
+    ),   
+    REG = list(
+        pretty_name         = "Region",
+        x_axis_candidate    = FALSE,
+        slider_candidate    = FALSE,
+        slider_rounding     = NA,
+        facet_candidate     = TRUE,
+        transform_for_ui    = identity,
+        transform_for_model = identity
+    )
 )
 
-
-# provide the POC colors
-poc_colors <<- c("#3B6E8F", "#A2B69A", "#A3DCE6", "#A784B4")
+# provide the POC colors for use in plots, UI, etc.
+poc_colors    <<- c("#3B6E8F", "#A2B69A", "#A3DCE6", "#A784B4")
 portal_colors <<- c("#D9BB32", "#6DB33F", "#6E9CAE", "#B1662B", "#5B8067", 
                     "#444D3E", "#994D3E", "#10475B", "#7D6E86", "#D47079", 
                     "#262F1D", "#B0B0B0")
-rage_colors <<- portal_colors[c(1, 2, 3, 4)]
 
 ###############################################################################
-## CONFIGURATION PROCESSING
+## CONFIGURATION PROCESSING (AUTO-GENERATE ADDITIONAL USEFUL FEATURES)
 
-# reformat the variable information to make it easy to work with
-variable_configuration <<- do.call(rbind, variable_configuration)
-variable_configuration <<- data.frame(variable_configuration, 
-                                      stringsAsFactors = FALSE)
-names(variable_configuration) <<- c("pretty_name", "raw_name", 
-                                    "model_role", "ui_role")
+# extract the fixed ui options (the levels for any ui features that are
+# generated statically - such as the x-axis choices - rather than dynamically -
+# such as the sliders)
+get_fixed_ui_options <- function(variable_config_list) {
+    # collect the x-axis options names
+    x_axis_options <- c()
+    for(index in 1:length(variable_config_list)) {
+        if(variable_config_list[[index]]$x_axis_candidate) {
+            current_name <- variable_config_list[[index]]$pretty_name
+            x_axis_options <- c(x_axis_options, current_name)
+        }
+    }
+    
+    # collect the facet options names
+    facet_options <- c()
+    for(index in 1:length(variable_config_list)) {
+        if(variable_config_list[[index]]$facet_candidate) {
+            current_name <- variable_config_list[[index]]$pretty_name
+            facet_options <- c(facet_options, current_name)
+        }
+    }
+    
+    # return all option collections
+    list(x_axis_options = x_axis_options, 
+         facet_options  = facet_options)
+}
 
-# capture key subsets and features
-x_axis_options <<- filter(variable_configuration, ui_role == "x-axis + slider" | 
-                              ui_role == "x-axis"
-)[["pretty_name"]]
-facet_options <<- filter(variable_configuration, ui_role == "facet"
-)[["pretty_name"]]
-slider_options <<- filter(variable_configuration, ui_role == "x-axis + slider")
+fixed_ui_options <<- get_fixed_ui_options(variable_configuration)
+
+# create a simple collection of raw = pretty name pairs (to make it easy to
+# associate the pairs)
+raw_pretty_pairs <<- do.call(rbind, variable_configuration)
+raw_pretty_pairs <<- as.data.frame(raw_pretty_pairs)$pretty_name
 
 ###############################################################################
 ## SHINY UI LOOP
@@ -99,11 +182,12 @@ shinyUI(navbarPage(
         column(3, 
                wellPanel(               
                    radioButtons("x_axis_choice", label = h3("Select X-Axis"), 
-                                choices = x_axis_options),
+                                choices = fixed_ui_options$x_axis_options),
                    
                    radioButtons("facet_choice", 
                                 label = h3("Facet Choice"),
-                                choices = c("None", facet_options))
+                                choices = c("None", 
+                                            fixed_ui_options$facet_options))
                ),
                
                wellPanel(
@@ -144,9 +228,9 @@ shinyUI(navbarPage(
         ),
         
         column(9,
-            plotOutput("error_bar_plot"),
-            
-            plotOutput("dot_cloud_plot")
+               plotOutput("error_bar_plot"),
+               
+               plotOutput("dot_cloud_plot")
         )
     ))
 ))

@@ -497,103 +497,49 @@ get_dot_cloud_plot <- function(formatted_likelihoods,
 }
 
 ###############################################################################
-## TEST WRAPPER
-# OUT OF DATE - REVIEW BEFORE TRYING TO USE
-
-test_wrapper <- function(dataset, model_object, 
-                         x_axis_selected, facet_selected = NULL,
-                         coeff_sample_size = 1000) {
-    # create the supporting objects
-    pe <- get_point_estimates(model_object)
-    cvm <- get_covariance_matrix(model_object)
-    ce <- get_coefficient_estimates(coeff_sample_size, pe, cvm, 
-                                    model_object)
-    nd <- get_new_data(dataset, model_object, 
-                       x_axis_selected, facet_selected = facet_selected)
-    
-    # generate the predictions
-    raw_likelihoods <- mlogitsimev(nd, ce, ci = 0.67)
-    
-    # generate the plot object
-    plot_object <- visualize_predictions(raw_likelihoods, model_object, 
-                                         nd, x_axis_selected, facet_selected)
-    # return the plot object
-    return(plot_object)
-}
-
-###############################################################################
 ## ADDITIONAL HELPER FUNCTIONS
 
-# This function will generate the key features needed to create the sliders. By
-# default it expects an explicit index of variables that are allowed to be
-# given a slider. However, 'auto' mode can be turned on and - so long as 
-# the outcome_variable is provided - the function will generate sliders
-# intelligently (but inefficiently) from the data itself.
-define_sliders <- function(x_axis_selected = NA,
-                           slider_raw_names,
-                           slider_pretty_names = NA,
-                           base_data,
-                           auto = FALSE, 
-                           outcome_variable = NULL) {
-    
-    if(auto) {
-        # make index of variables in the base dataset which are NOT factors
-        slider_index <- which(!sapply(base_data, is.factor))
+# This function expands the variable configuration object to include some more
+# features, specifically those needed to define the sliders. It calculates
+# these from the base data object.
+add_slider_features <- function(variable_config_object, base_data) {
+    # loop over the variables specified the variable configuration object
+    for(index in 1:length(variable_config_object)) {
+        # adjust object name to be more manageable
+        vc <- variable_config_object
         
-        # if it was retained, set the outcome variable index to FALSE
-        outcome_retained <- grepl(outcome_variable, names(slider_index))
-        if(any(outcome_retained)) {
-            slider_index[outcome_retained] <- FALSE
+        # grab the current variable raw name
+        current_var <- names(vc)[[index]]
+        
+        # if it's numeric, calculate the relevant values, otherwise assign NA
+        # to the values to the properties exist but are appropriate for a non-
+        # numeric variable
+        if(is.numeric(base_data[[current_var]])) {
+            current_median <- median(base_data[[current_var]])
+            current_range <- range(base_data[[current_var]])
+            
+            # apply the variable's transform_to_ui function (making the values
+            # ui friendly)
+            current_median <- vc[[index]]$transform_for_ui(current_median)
+            current_range[1] <- vc[[index]]$transform_for_ui(current_range[1])
+            current_range[2] <- vc[[index]]$transform_for_ui(current_range[2])
+            
+            # round the range values so that ugly values are more ui friendly
+            current_range[1] <- floor(current_range[1])
+            current_range[2] <- ceiling(current_range[2])
+        } else {
+            current_median <- NA
+            current_range <- NA
         }
-    } else {
-        # if 'auto' is FALSE, then expect raw names to be provided and use them
-        slider_index <- names(base_data) %in% slider_raw_names
-        # this approach loses the variable names, so we restore them
-        names(slider_index) <- names(base_data)
+        
+        # add the values to the variable configuration
+        variable_config_object[[current_var]]$ui_median <- current_median
+        variable_config_object[[current_var]]$ui_min <- current_range[1]
+        variable_config_object[[current_var]]$ui_max <- current_range[2]
     }
     
-    # if an x-axis variable has been provided, then set the x-axis variable
-    # to FALSE in the index so that it is not included as a slider
-    if(!is.na(x_axis_selected)) {
-        x_axis_position <- grepl(x_axis_selected, names(slider_index))
-        slider_index[x_axis_position] <- FALSE
-    }
-    
-    # create a dataframe with just the retained slider variables
-    slider_selections <- base_data[slider_index]
-    
-    # create dataframe with basic values for all predictors that need sliders
-    slider_features <- c()
-    for(index in 1:length(slider_selections)) {
-        var_raw_name <- names(slider_selections)[index]
-        # get a reasonable range from the base_data object (floor and ceiling
-        # used to make sure we have round, inclusive numbers)
-        var_min <- floor(range(with(slider_selections, get(var_raw_name)))[1])
-        var_max <- ceiling(range(with(slider_selections, get(var_raw_name)))[2])
-        # the starting value defaults to the base data median (matches the
-        # initial behavior of the get_new_data function and thus the initial
-        # new_data object)
-        var_median <- median(with(slider_selections, get(var_raw_name)))
-        slider_features <- rbind(slider_features, 
-                                 data.frame(var_raw_name,
-                                            var_min, var_max, var_median,
-                                            stringsAsFactors = FALSE)
-        )
-    }
-    
-    # if pretty names were given, add these to the features...
-    if(!is.na(slider_pretty_names)) {
-        # but first check if we have to drop out the x-axis variable again
-        if(!is.na(x_axis_selected)) {
-            x_axis_position <- grepl(x_axis_selected, slider_raw_names)
-            slider_pretty_names <- slider_pretty_names[!x_axis_position]
-        }
-        # then assign the pretty names
-        slider_features$var_pretty_name <- slider_pretty_names
-    }
-    
-    # return the dataframe of slider features
-    return(slider_features)
+    # return the update variable_config_object
+    return(variable_config_object)
 }
 
 ###############################################################################
