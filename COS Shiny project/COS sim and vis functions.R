@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/25/2015
-# Date updated: 4/14/2015
+# Date updated: 4/21/2015
 
 # NOTE: Functions were largely developed in the "gator model example V3.R"
 #       script. That script was archived to allow us to seperate the model
@@ -66,13 +66,10 @@
 #   - visualize with ggplot
 #   - may be multiple visualizations for development purposes
 #
-# - WRAPPER FUNCTION FOR SIMULATION AND VISUALIZATION (FOR OFFLINE TESTING)
-#   [PROBABLY OUTDATED - DON'T USE WITHOUT INSPECTING]
-#   - simply lets you manually generate plot objects to test app behavior
-#     "under the hood"
-#
 # - ADDITIONAL HELPER FUNCTIONS (TO CONSOLIDATE CERTAIN SHINY SERVER TASKS)
-#   - generating the slider names, ranges, and starting values
+#   - expanding the variable configuration object to complete the values
+#     needed to define the sliders
+#   - generate a slider set
 
 ###############################################################################
 ## LOAD SUPPORTING LIBRARIES
@@ -427,9 +424,9 @@ get_ribbon_plot <- function(formatted_likelihoods,
 }
 
 get_error_bar_plot <- function(formatted_likelihoods,
-                            x_lab = "Outcome", 
-                            y_lab = "p(Outcome)",
-                            custom_colors = NULL) {
+                               x_lab = "Outcome", 
+                               y_lab = "p(Outcome)",
+                               custom_colors = NULL) {
     # build the plot object
     plot_object <- ggplot(formatted_likelihoods, 
                           aes(x = outcome, 
@@ -540,6 +537,119 @@ add_slider_features <- function(variable_config_object, base_data) {
     
     # return the update variable_config_object
     return(variable_config_object)
+}
+
+# This function generates the actual slider objects. It expects the variable
+# configuration object to determine which variables to make sliders for, but
+# will also accept a vector of raw variable names that overrides the variable 
+# configuration file to exclude selected variables. A unique "append" name must
+# also be provided to ensure that separate slider sets to not share name space.
+make_sliders <- function(variable_config_list, 
+                         variables_to_drop = NA,
+                         append_name) {
+    # index which variables are slider candidates
+    slider_index <- unlist(lapply(variable_config_list, 
+                                  function(x) x$slider_candidate == TRUE))
+    
+    # if a vector of variables to drop has been provided, adjust their indices 
+    # to FALSE so sliders are not made for them
+    if(!is.na(variables_to_drop)) {
+        for(index in 1:length(variables_to_drop)) {
+            slider_index[variables_to_drop[index]] <- FALSE
+        }
+    }
+    
+    # subset variable_config_list to just get the slider candidates
+    # (excluding the x-axis variabe)
+    selected_sliders <- variable_config_list[slider_index]
+    
+    # generate the sliders
+    lapply(1:length(selected_sliders), function(i) {
+        sliderInput(
+            inputId = paste0(append_name,
+                             "_",
+                             names(selected_sliders)[i]), 
+            label   = selected_sliders[[i]]$pretty_name,
+            min     = selected_sliders[[i]]$ui_min, 
+            max     = selected_sliders[[i]]$ui_max,
+            value   = selected_sliders[[i]]$ui_median,
+            step    = ifelse(is.na(selected_sliders[[i]]$slider_rounding),
+                             0.01,
+                             selected_sliders[[i]]$slider_rounding)
+        )
+    })
+}
+
+# This function updates the base data object to create a data object adjusted
+# for appropriate slider values. The inputs to the function should echo the
+# inputs used to make the slider set with the addition of specifying the 
+# target object. To establish the reactive link, we also need to explicitly
+# pass the input object.
+apply_slider_values <- function(variable_config_list,
+                                variables_to_drop = NA,
+                                append_name,
+                                update_target,
+                                input_call) {
+    # index which variables are slider candidates
+    slider_index <- unlist(lapply(variable_config_list, 
+                                  function(x) x$slider_candidate == TRUE))
+    
+    # if a vector of variables to drop has been provided, adjust their indices 
+    # to FALSE so sliders are not made for them
+    if(!is.na(variables_to_drop)) {
+        for(index in 1:length(variables_to_drop)) {
+            slider_index[variables_to_drop[index]] <- FALSE
+        }
+    }
+    
+    # subset variable_config_list to just get the slider candidates
+    # (excluding the x-axis variabe)
+    selected_sliders <- variable_config_list[slider_index]
+    
+    # update the values based on current slider inputs
+    for(i in 1:length(selected_sliders)) {
+        # grab the key details
+        current_var <- names(selected_sliders)[[i]]
+        slider_name <- paste0(append_name, "_", current_var)
+        slider_value <- isolate(input_call[[slider_name]])
+        
+        # all the input variables initialize as "NULL" - we want to avoid
+        # working with them until they've been assigned a value
+        # NOTE: input[[current_var]] IS a reactive link (actually a flexible 
+        #       set of reactive links) - it links to the sliders dynamically 
+        #       generated by the output$slider_set observer
+        if(!is.null(isolate(input_call[[slider_name]]))) {
+            # apply the relevant transformation to convert slider values
+            # to model-appropriate values
+            model_value <- selected_sliders[[current_var]]$transform_for_model(slider_value)
+            
+            # update the matching update_target column with the 
+            # current slider value
+            update_target[current_var] <- model_value
+            
+            # now test to see if the slider variable is part of any
+            # interactions
+            interaction_index <- grepl(paste(paste0(".", current_var), 
+                                             paste0(current_var, "."), 
+                                             sep = "|"),
+                                       names(update_target))
+            if(any(interaction_index)) {
+                # if we find interactions, we pull those terms out
+                interaction_vars <- names(update_target)[interaction_index]
+                # create a list with the items in each term split
+                interaction_list <- strsplit(interaction_vars, ".", fixed = T)
+                # update the interaction variables by multiplying their
+                # source columns together
+                for(current_set in 1:length(interaction_list)) {
+                    matching_cols <- update_target[interaction_list[[current_set]]]
+                    updated_col <- apply(matching_cols, 1, prod)
+                    update_target[interaction_vars[[current_set]]] <- updated_col
+                }
+            }
+        }
+    }
+    
+    return(update_target)
 }
 
 ###############################################################################
