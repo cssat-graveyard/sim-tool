@@ -16,7 +16,7 @@ library(RODBC)
 #loan nnet for multinom function 
 library(nnet)
 #make pretty tables
-library(pander)
+# library(pander)
 #load lubridate to handle dates
 library(lubridate)
 #load psych to calc factor scores
@@ -520,6 +520,34 @@ dat4$high_in <- as.factor(dat4$high_in)
 dat4$sm_coll <- as.factor(dat4$sm_coll)
 dat4$employ <- as.factor(dat4$employ)
 
+levels(dat4$non_min) <- c("Minority Child"
+                          ,"White or Caucasian Child")
+
+levels(dat4$male) <- c("Female Child"
+                       ,"Male Child")
+
+levels(dat4$married) <- c("Child Parents are Not Married"
+                          ,"Child Parents are Married")
+
+levels(dat4$rel_plc) <- c("Longest Placement in a non-Relative Setting"
+                          ,"Longest Placement in a Relative Setting")
+
+levels(dat4$high_in) <- c("Annual Income Less than or Equal to $10,000"
+                          ,"Annual Income More than $10,000")
+
+levels(dat4$sm_coll) <- c("High School or Below"
+                          ,"More than High School")
+
+levels(dat4$employ) <- c("Unemployed"
+                         ,"Full or Part Time Employment")
+
+levels(dat4$REG) <- c("Region 2 South"
+                      ,"Region 1 North"
+                      ,"Region 1 South"
+                      ,"Region 3 South"
+                      ,"Region 3 North"
+                      ,"Region 2 North")
+
 #assign dat4 to data object for sim-tool app
 data <- dat4
 
@@ -534,6 +562,6 @@ model <- multinom(outcome ~ . + employ*housing_hs_cnt +
                  ,Hess = TRUE)
 
 #save objects for sim-tool
-save(data, model, file = "data_model.RData")
+save(data, model, file = "/Users/mienkoja/Dropbox/repos/sim-tool/data_model.RData")
 
 ```
