@@ -49,17 +49,19 @@ source("COS custom mlogitsimev.R")
 ## USER DEFINED INPUTS
 
 # source the base data and base model
-load("data_model.RData")
+load("data_model_V2.RData")
 
 # explicitly choose the data object we will be working with
 # NOTE: incomplete cases will be dropped to avoid modeling/plotting issues
 base_data <<- data[which(complete.cases(data)), ]
 
 # specify the formula for the base data object
-base_formula <<- outcome ~ mist_scores + wrkg_scores + recep_scores + buyn_scores + 
-    log_age_eps_begin + non_min + male + log_par_age + married + 
-    hhnum_c + rel_plc + log_eps_rank + housing_hs_cnt + high_in + 
-    sm_coll + employ + REG + male * log_par_age + mist_scores * wrkg_scores
+base_formula <<- outcome ~ mist_scores + wrkg_scores + recep_scores + 
+    log_age_eps_begin + non_min + male + log_par_age + married + hhnum_c + 
+    rel_plc + log_eps_rank + housing_hs_cnt + high_in + sm_coll + employ + REG +
+    buyn_scores +
+    high_in * housing_hs_cnt +
+    housing_hs_cnt * employ
 
 ###############################################################################
 ## PREPARE BASE DATA FOR SIMULATION/VISUALIZATION (EXPANSION, STATIC FEATURES)
@@ -81,6 +83,9 @@ exp_data[, "X.Intercept."] <<- NULL
 # fit the model to the expanded dataset (using the expanded model)
 # multinom: "fit a multinomial log-linear model via neural networks"
 exp_model <<- multinom(formula(exp_data), data = exp_data, Hess = T)
+
+# extract the interaction column names from the expanded data
+interaction_cols <<- get_interaction_col_names(base_formula, exp_data)
 
 # get the static simulation/visualization features
 point_estimates <<- get_point_estimates(exp_model)
@@ -136,7 +141,8 @@ shinyServer(function(input, output, session) {
                      base_data,
                      exp_model, 
                      x_axis_raw_name(), 
-                     facet_selected = facet_raw_name())
+                     facet_selected = facet_raw_name(),
+                     interaction_col_names = interaction_cols)
     })
     
     # generate counterfactual data for the "Explore Mode" visualizations
@@ -161,7 +167,8 @@ shinyServer(function(input, output, session) {
                                 append_name = "explore",
                                 # reactive link for when the sliders are visible
                                 update_target = base_new_data(),
-                                input_call = isolate(input))
+                                input_call = isolate(input),
+                                interaction_col_names = interaction_cols)
         } else {
             # reactive link for when the sliders are hidden
             return(base_new_data())
@@ -181,7 +188,8 @@ shinyServer(function(input, output, session) {
                             variables_to_drop = NA,
                             append_name = "sc",
                             update_target = isolate(base_new_data()),
-                            input_call = isolate(input))
+                            input_call = isolate(input),
+                            interaction_col_names = interaction_cols)
     })
     
     # feed the representative data to the sampled coefficients to generate
@@ -216,9 +224,9 @@ shinyServer(function(input, output, session) {
         errorbar_ready <- format_for_visualization(likelihoods_raw,
                                                    exp_model,
                                                    base_data,
-                                                   isolate(explore_new_data()),
-                                                   isolate(x_axis_raw_name()),
-                                                   facet_selected = isolate(facet_raw_name()))
+                                                   isolate(sc_new_data()),
+                                                   x_axis_selected = NA,
+                                                   facet_selected = NULL)
         
         # get single point estimates for the dot plot cloud
         likelihoods_cloud <- mlogitsimev_med(sc_new_data(), 
@@ -261,16 +269,16 @@ shinyServer(function(input, output, session) {
         )
     })
     
-    output$error_bar_plot <- renderPlot({
-        # make sure the update button has been clicked at least once (don't
-        # draw until a user request has occurred)
-        if(input$update_sc_data > 0) {
-            get_error_bar_plot(sc_likelihoods()$eb,
-                               y_lab = "Probability",
-                               x_lab = "Outcomes",
-                               custom_colors = portal_colors)
-        }
-    })
+#     output$error_bar_plot <- renderPlot({
+#         # make sure the update button has been clicked at least once (don't
+#         # draw until a user request has occurred)
+#         if(input$update_sc_data > 0) {
+#             get_error_bar_plot(sc_likelihoods()$eb,
+#                                y_lab = "Probability",
+#                                x_lab = "Outcomes",
+#                                custom_colors = portal_colors)
+#         }
+#     })
     
     output$dot_cloud_plot <- renderPlot({
         # make sure the update button has been clicked at least once (don't

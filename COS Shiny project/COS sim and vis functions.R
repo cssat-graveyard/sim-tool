@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/25/2015
-# Date updated: 4/21/2015
+# Date updated: 4/22/2015
 
 # NOTE: Functions were largely developed in the "gator model example V3.R"
 #       script. That script was archived to allow us to seperate the model
@@ -70,6 +70,7 @@
 #   - expanding the variable configuration object to complete the values
 #     needed to define the sliders
 #   - generate a slider set
+#   - determine which columns in the expanded data represent interactions
 
 ###############################################################################
 ## LOAD SUPPORTING LIBRARIES
@@ -83,6 +84,7 @@ library(simcf)      # creates counterfactual sets
 library(dplyr)      # serves various formatting needs
 library(tidyr)      # for reformatting data for visualization
 library(ggplot2)    # for visualizing the data
+library(combinat)   # for building interaction term permutations
 
 ###############################################################################
 ## FUNCTIONs TO GENERATE OUTCOME PREDICTIONS FOR GIVEN MODEL OBJECT
@@ -171,9 +173,14 @@ get_coefficient_estimates <- function(sample_size,
 }
 
 # generate data to feed the coefficient estimates
-get_new_data <- function(exp_data, base_data, model_object,
-                         x_axis_selected, x_range = NULL, x_range_density = 100,
-                         facet_selected = NULL) {
+get_new_data <- function(exp_data, 
+                         base_data, 
+                         model_object,
+                         x_axis_selected, 
+                         x_range = NULL, 
+                         x_range_density = 100,
+                         facet_selected = NULL,
+                         interaction_col_names = NA) {
     # check if an explicit range has been provided for the x-axis variable
     if(is.null(x_range)) {
         # if not provided, calculate the range from the dataset
@@ -184,7 +191,6 @@ get_new_data <- function(exp_data, base_data, model_object,
     
     # initialize the minimum set of counterfactuals (the x-axis variable cuts)
     counterfactuals <- seq(x_range[1], x_range[2], length.out = x_range_density)
-    
     # check if a facet variable has been set
     if(!is.null(facet_selected)) {
         # if a facet variable has been set, we expand the counterfactuals
@@ -211,10 +217,10 @@ get_new_data <- function(exp_data, base_data, model_object,
         counterfactuals <- counterfactuals[factor_var_combinations]
         # convert the results to 0s and 1s
         counterfactuals <- ifelse(is.na(counterfactuals), 0, 1)
-        # drop the reference level
-        counterfactuals <- counterfactuals[, -1]
         # add the x_axis_cuts back in as the first column
         counterfactuals <- data.frame(rep(x_axis_cuts), counterfactuals)
+        # drop the reference level
+        counterfactuals <- counterfactuals[, -2]
         # label the x_axis_cuts column properly
         names(counterfactuals)[1] <- x_axis_selected
     } else {
@@ -267,13 +273,16 @@ get_new_data <- function(exp_data, base_data, model_object,
             extra_predictors
     }
     
-    # now we explore our predictor set for any interaction terms
-    interaction_index <- grepl(".", predictor_names, fixed = T)
-    if(any(interaction_index)) {
+    # now we check if we have interaction columns in our predictors
+    if(!is.na(interaction_col_names)) {
         # if we find them, we pull those terms out
+        interaction_index <- predictor_names %in% interaction_col_names
         interaction_vars <- predictor_names[interaction_index]
-        # create a list with the items in each term split
-        interaction_list <- strsplit(interaction_vars, ".", fixed = T)
+        # create a list with the items in each term split (looks crazy but
+        # I'm simply replacing the first period with a unique phrase so that
+        # we only split once)
+        interaction_list <- sub(".", "---", interaction_vars, fixed = TRUE)
+        interaction_list <- strsplit(interaction_list, "---", fixed = T)
         # we quickly capture the current number of columns in our 
         # countefactual table and add one to it (giving us the index
         # for where we are adding new columns)
@@ -397,7 +406,7 @@ get_ribbon_plot <- function(formatted_likelihoods,
                            labels = scales::percent,
                            expand = c(0, 0)) +
         scale_x_continuous(expand = c(0, 0)) +
-        theme_bw() +
+        theme_bw(16) +
         theme(panel.grid.minor = element_blank(), 
               panel.grid.major = element_blank(),
               strip.text = element_text(color = "white")) +
@@ -430,7 +439,8 @@ get_error_bar_plot <- function(formatted_likelihoods,
     # build the plot object
     plot_object <- ggplot(formatted_likelihoods, 
                           aes(x = outcome, 
-                              color = outcome)) + 
+                              color = outcome,
+                              group = outcome)) + 
         geom_errorbar(aes(ymin = lower50, ymax = upper50)) +
         geom_errorbar(aes(ymin = lower95, ymax = upper95,
                           width = 0.5)) +
@@ -589,7 +599,8 @@ apply_slider_values <- function(variable_config_list,
                                 variables_to_drop = NA,
                                 append_name,
                                 update_target,
-                                input_call) {
+                                input_call,
+                                interaction_col_names) {
     # index which variables are slider candidates
     slider_index <- unlist(lapply(variable_config_list, 
                                   function(x) x$slider_candidate == TRUE))
@@ -627,17 +638,24 @@ apply_slider_values <- function(variable_config_list,
             # current slider value
             update_target[current_var] <- model_value
             
-            # now test to see if the slider variable is part of any
-            # interactions
-            interaction_index <- grepl(paste(paste0(".", current_var), 
-                                             paste0(current_var, "."), 
-                                             sep = "|"),
-                                       names(update_target))
+            # now we check if there any interactions...
+            if(!is.na(interaction_col_names)) {
+                interaction_index <- grepl(paste(paste0(".", current_var), 
+                                                 paste0(current_var, "."), 
+                                                 sep = "|"),
+                                           interaction_col_names)
+            } else {
+                interaction_index <- FALSE
+            }
+            # if there are any interactions...
             if(any(interaction_index)) {
-                # if we find interactions, we pull those terms out
-                interaction_vars <- names(update_target)[interaction_index]
-                # create a list with the items in each term split
-                interaction_list <- strsplit(interaction_vars, ".", fixed = T)
+                # if we find interactions, we pull those column names out
+                interaction_vars <- interaction_col_names[interaction_index]
+                # create a list with the items in each term split (looks crazy but
+                # I'm simply replacing the first period with a unique phrase so that
+                # we only split once)
+                interaction_list <- sub(".", "---", interaction_vars, fixed = TRUE)
+                interaction_list <- strsplit(interaction_list, "---", fixed = T)
                 # update the interaction variables by multiplying their
                 # source columns together
                 for(current_set in 1:length(interaction_list)) {
@@ -650,6 +668,68 @@ apply_slider_values <- function(variable_config_list,
     }
     
     return(update_target)
+}
+
+# We need to be able to identify columns that are the result of interactions
+# between base variables. However, the base data expansion makes it difficult
+# to recover these columns - it also expands factor levels and does not use
+# a unique separator for interaction combinations v. factor levels. This
+# function finds the possible name permutations that may result from
+# interactions and identifies columns that have matches - which will be the
+# interaction columns.
+get_interaction_col_names <- function(base_formula, exp_data) {
+    # convert the base formula into a single character string (ignoring the outcome
+    # variable)
+    formula_string <- as.character(base_formula)[[3]]
+    
+    # parse all the separate terms (not variables but rather anything that occurs
+    # before or after a "+" symbol)
+    formula_parsed <- strsplit(formula_string, "+", fixed = TRUE)
+    
+    # get rid of any spaces (note that strsplit returns a list - we unlist to make
+    # sure we work with a character vector)
+    formula_parsed <- gsub(" ", "", unlist(formula_parsed))
+    
+    # now we collect just those terms that have an interaction symbol "*"
+    interaction_terms <- grep("*", formula_parsed, fixed = TRUE, value = TRUE)
+    
+    # quickly check to see if there are any interaction terms at all - if none
+    # we want to return "NA" so that later steps in this function don't fail
+    # and so that we can identify the lack of interaction terms correctly in
+    # later functions
+    if(length(interaction_terms) == 0) {
+        return(NA)
+    }
+    
+    # for each term, we extract the variable names
+    interaction_terms <- strsplit(interaction_terms, "*", fixed = TRUE)
+    
+    # for each term, we need to construct all possible combinations of the variable
+    # names (variable names separated by a ".") - these are what we will use to
+    # identity the interaction data columns in the expanded data frame
+    # 1. get the permutations of the variable name strings
+    interaction_combos <- lapply(interaction_terms, permn)
+    # 2. collapse into single strings separated by a "."
+    interaction_combos <- lapply(interaction_combos, 
+                                 function(x) lapply(x, paste0, collapse = "."))
+    # 3. switch the ugly list to a clean character vector
+    interaction_combos <- unlist(interaction_combos)
+    
+    # test the expanded data object names against the vector to determine which
+    # columns have combinations of the variable names separated by a "." (thus
+    # indicating an interaction column)
+    # 1. test each permutation against the column names
+    interaction_index <- lapply(interaction_combos, 
+                                function(x) grepl(x, names(exp_data)))
+    # 2. collapse the results - if a column name matches ANY permutation it is
+    #    any interaction column
+    interaction_index <- do.call(rbind, interaction_index)
+    interaction_index <- apply(interaction_index, 2, any)
+    # 3. get the subset of column names that match a permutation
+    interaction_col_names <- names(exp_data)[interaction_index]
+    
+    # return the names of interaction columns
+    return(interaction_col_names)
 }
 
 ###############################################################################
