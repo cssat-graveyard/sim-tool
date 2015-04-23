@@ -283,7 +283,7 @@ shinyServer(function(input, output, session) {
     output$dot_cloud_plot <- renderPlot({
         # make sure the update button has been clicked at least once (don't
         # draw until a user request has occurred)
-        if(input$update_sc_data > 0) {
+        if(isolate(input$update_sc_data > 0)) {
             get_dot_cloud_plot(sc_likelihoods()$dp,
                                y_lab = "Probability",
                                x_lab = "Outcomes",
