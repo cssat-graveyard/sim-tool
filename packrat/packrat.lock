@@ -76,6 +76,11 @@ Source: CRAN
 Version: 1.2-6
 Hash: a53ddc5a49706984d234ea5cc209c8f0
 
+Package: combinat
+Source: CRAN
+Version: 0.0-8
+Hash: 55bf818210f976d6cb5125ebb9b6d32a
+
 Package: dichromat
 Source: CRAN
 Version: 2.0-0
@@ -129,7 +134,7 @@ Package: knitr
 Source: CRAN
 Version: 1.9
 Hash: 41c29594ced4d02b3b90b4c375680cd3
-Requires: digest, stringr, evaluate, formatR, highr, markdown
+Requires: digest, formatR, highr, stringr, markdown, evaluate
 
 Package: labeling
 Source: CRAN
@@ -202,12 +207,6 @@ Source: CRAN
 Version: 0.4.3
 Hash: 16c72d5c802629fae5a4abca901e0199
 
-Package: pander
-Source: CRAN
-Version: 0.5.1
-Hash: 8a1a930fa3eec8482561e9be5a562fc1
-Requires: Rcpp, digest
-
 Package: plyr
 Source: CRAN
 Version: 1.8.1
@@ -234,7 +233,7 @@ Requires: Rcpp, plyr, stringr
 Package: rmarkdown
 Source: CRAN
 Version: 0.5.1
-Requires: caTools, htmltools, knitr, yaml
+Requires: yaml, caTools, htmltools, knitr
 
 Package: scales
 Source: CRAN

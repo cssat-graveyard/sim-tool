@@ -2,13 +2,13 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 4/8/2015
-# Date updated: 
+# Date updated: 4/14/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
 
-# goal: This is a VERY minor revision of Chris Adolph's mlogitsimev function
-#       from his simcf package (https://github.com/chrisadolph/tile-simcf).
+# goal: This is a minor revision of Chris Adolph's mlogitsimev function from
+#       his simcf package (https://github.com/chrisadolph/tile-simcf).
 #
 #       The function passes representative generated data to a collection of
 #       simulated coefficients. It then summarizes the results to return key

@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 4/20/2015
+# Date updated: 4/21/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -71,7 +71,7 @@ variable_configuration <<- list(
         transform_for_model = function(x) x - 3
     ),    
     wrkg_scores = list(
-        pretty_name         = "Parent Working Score",
+        pretty_name         = "Parent/SW Relationship",
         x_axis_candidate    = TRUE,    
         slider_candidate    = TRUE,
         slider_rounding     = NA,
@@ -98,7 +98,7 @@ variable_configuration <<- list(
         transform_for_model = function(x) x - 3
     ),    
     log_age_eps_begin = list(
-        pretty_name         = "Age at Start of Episode",
+        pretty_name         = "Age at Removal",
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -111,12 +111,39 @@ variable_configuration <<- list(
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
-        facet_candidate     = TRUE,
+        facet_candidate     = FALSE,
         transform_for_ui    = identity,
         transform_for_model = identity
     ),   
     REG = list(
         pretty_name         = "Region",
+        x_axis_candidate    = FALSE,
+        slider_candidate    = FALSE,
+        slider_rounding     = NA,
+        facet_candidate     = TRUE,
+        transform_for_ui    = identity,
+        transform_for_model = identity
+    ),
+    employ = list(
+        pretty_name         = "Employment Status",
+        x_axis_candidate    = FALSE,
+        slider_candidate    = FALSE,
+        slider_rounding     = NA,
+        facet_candidate     = TRUE,
+        transform_for_ui    = identity,
+        transform_for_model = identity
+    ),
+    sm_coll = list(
+        pretty_name         = "Educational Level",
+        x_axis_candidate    = FALSE,
+        slider_candidate    = FALSE,
+        slider_rounding     = NA,
+        facet_candidate     = TRUE,
+        transform_for_ui    = identity,
+        transform_for_model = identity
+    ),
+    high_in = list(
+        pretty_name         = "Income",
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -228,7 +255,7 @@ shinyUI(navbarPage(
         ),
         
         column(9,
-               plotOutput("error_bar_plot"),
+#                plotOutput("error_bar_plot"),
                
                plotOutput("dot_cloud_plot")
         )

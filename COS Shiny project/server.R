@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 4/20/2015
+# Date updated: 4/21/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -49,17 +49,19 @@ source("COS custom mlogitsimev.R")
 ## USER DEFINED INPUTS
 
 # source the base data and base model
-load("data_model.RData")
+load("data_model_V2.RData")
 
 # explicitly choose the data object we will be working with
 # NOTE: incomplete cases will be dropped to avoid modeling/plotting issues
 base_data <<- data[which(complete.cases(data)), ]
 
 # specify the formula for the base data object
-base_formula <<- outcome ~ mist_scores + wrkg_scores + recep_scores + buyn_scores + 
-    log_age_eps_begin + non_min + male + log_par_age + married + 
-    hhnum_c + rel_plc + log_eps_rank + housing_hs_cnt + high_in + 
-    sm_coll + employ + REG + male * log_par_age + mist_scores * wrkg_scores
+base_formula <<- outcome ~ mist_scores + wrkg_scores + recep_scores + 
+    log_age_eps_begin + non_min + male + log_par_age + married + hhnum_c + 
+    rel_plc + log_eps_rank + housing_hs_cnt + high_in + sm_coll + employ + REG +
+    buyn_scores +
+    high_in * housing_hs_cnt +
+    housing_hs_cnt * employ
 
 ###############################################################################
 ## PREPARE BASE DATA FOR SIMULATION/VISUALIZATION (EXPANSION, STATIC FEATURES)
@@ -81,6 +83,9 @@ exp_data[, "X.Intercept."] <<- NULL
 # fit the model to the expanded dataset (using the expanded model)
 # multinom: "fit a multinomial log-linear model via neural networks"
 exp_model <<- multinom(formula(exp_data), data = exp_data, Hess = T)
+
+# extract the interaction column names from the expanded data
+interaction_cols <<- get_interaction_col_names(base_formula, exp_data)
 
 # get the static simulation/visualization features
 point_estimates <<- get_point_estimates(exp_model)
@@ -118,54 +123,16 @@ shinyServer(function(input, output, session) {
     
     # generate the sliders for the "Explore Mode"
     output$explore_slider_set <- renderUI({
-        # index which variables are slider candidates
-        slider_index <- unlist(lapply(variable_configuration, 
-                                      function(x) x$slider_candidate == TRUE))
-        
-        # set the selected x-axis variable to FALSE in the index
-        slider_index[x_axis_raw_name()] <- FALSE
-        
-        # subset variable_configuration to just get the slider candidates
-        # (excluding the x-axis variabe)
-        selected_sliders <- variable_configuration[slider_index]
-        
-        # generate the sliders
-        lapply(1:length(selected_sliders), function(i) {
-            sliderInput(inputId = paste0("explore_",
-                                         names(selected_sliders)[i]), 
-                        label = selected_sliders[[i]]$pretty_name,
-                        min = selected_sliders[[i]]$ui_min, 
-                        max = selected_sliders[[i]]$ui_max,
-                        value = selected_sliders[[i]]$ui_median,
-                        step = ifelse(is.na(selected_sliders[[i]]$slider_rounding),
-                                      0.01,
-                                      selected_sliders[[i]]$slider_rounding)
-            )
-        })
+        make_sliders(variable_config_list = variable_configuration,
+                     variables_to_drop = x_axis_raw_name(),
+                     append_name = "explore")
     })
     
     # generate the sliders for the "Single Case Mode"
     output$sc_slider_set <- renderUI({
-        # index which variables are slider candidates
-        slider_index <- unlist(lapply(variable_configuration, 
-                                      function(x) x$slider_candidate == TRUE))
-        
-        # subset variable_configuration to just get the slider candidates
-        selected_sliders <- variable_configuration[slider_index]
-        
-        # generate the sliders
-        lapply(1:length(selected_sliders), function(i) {
-            sliderInput(inputId = paste0("sc_",
-                                         names(selected_sliders)[i]), 
-                        label = selected_sliders[[i]]$pretty_name,
-                        min = selected_sliders[[i]]$ui_min, 
-                        max = selected_sliders[[i]]$ui_max,
-                        value = selected_sliders[[i]]$ui_median,
-                        step = ifelse(is.na(selected_sliders[[i]]$slider_rounding),
-                                      0.01,
-                                      selected_sliders[[i]]$slider_rounding)
-            )
-        })
+        make_sliders(variable_config_list = variable_configuration,
+                     variables_to_drop = NA,
+                     append_name = "sc")
     })
     
     # generate representative data to feed coefficients
@@ -174,157 +141,66 @@ shinyServer(function(input, output, session) {
                      base_data,
                      exp_model, 
                      x_axis_raw_name(), 
-                     facet_selected = facet_raw_name())
+                     facet_selected = facet_raw_name(),
+                     interaction_col_names = interaction_cols)
     })
     
     # generate counterfactual data for the "Explore Mode" visualizations
     explore_new_data <- reactive({
-        # get the current representative data from base_new_data()
-        # NOTE: this also establishes the first reactive link - this function
-        #       will re-run if the base_new_data object updates
-        new_data_updated <- base_new_data()
-        
         # establish the reactive link to the "Update" button
         input$update_explore_data
         
-        # this next section only gets evaluated IF the "Show sliders?" option is
-        # set to true - in that case, the slider values should be used to 
-        # update the data
+        # this next section only gets evaluated if the "Show sliders?" option is
+        # set to TRUE - in that case, the slider values should be used to 
+        # create an updated data object
         # NOTE: the "Update Plot" button will only be visible if the "Show
         #       sliders?" option is set to true, so we are restricting our
         #       update pathways to just TWO possibilities:
-        #       1. a new x-axis is selected (refreshing all the data/sliders)
-        #       2. the "Update Plot" button is pressed, updating the data with
-        #          slider values
+        #       1. the "Update Plot" button is visible and is pressed, updating 
+        #          the data with slider values
+        #       2. a new x-axis is selected (refreshes the plots that use
+        #          explore_new_data() and resets the sliders if they are 
+        #          visible)
         if(isolate(input$slider_show)) {
-            # index which variables are slider candidates
-            slider_index <- unlist(lapply(variable_configuration, 
-                                          function(x) x$slider_candidate == TRUE))
-            
-            # set the selected x-axis variable to FALSE in the index
-            slider_index[x_axis_raw_name()] <- FALSE
-            
-            # subset variable_configuration to just get the slider candidates
-            # (excluding the x-axis variabe)
-            selected_sliders <- variable_configuration[slider_index]
-            
-            # update the values based on current slider inputs
-            for(i in 1:length(selected_sliders)) {
-                # grab the key details
-                current_var <- names(selected_sliders)[[i]]
-                slider_name <- paste0("explore_", current_var)
-                slider_value <- isolate(input[[slider_name]])
-                
-                # all the input variables initialize as "NULL" - we want to avoid
-                # working with them until they've been assigned a value
-                # NOTE: input[[current_var]] IS a reactive link (actually a flexible 
-                #       set of reactive links) - it links to the sliders dynamically 
-                #       generated by the output$slider_set observer
-                if(!is.null(isolate(input[[slider_name]]))) {
-                    # apply the relevant transformation to convert slider values
-                    # to model-appropriate values
-                    model_value <- selected_sliders[[current_var]]$transform_for_model(slider_value)
-                    
-                    # update the matching new_data_updated column with the 
-                    # current slider value
-                    new_data_updated[current_var] <- model_value
-                    
-                    # now test to see if the slider variable is part of any
-                    # interactions
-                    interaction_index <- grepl(paste(paste0(".", current_var), 
-                                                     paste0(current_var, "."), 
-                                                     sep = "|"),
-                                               names(new_data_updated))
-                    if(any(interaction_index)) {
-                        # if we find interactions, we pull those terms out
-                        interaction_vars <- names(new_data_updated)[interaction_index]
-                        # create a list with the items in each term split
-                        interaction_list <- strsplit(interaction_vars, ".", fixed = T)
-                        # update the interaction variables by multiplying their
-                        # source columns together
-                        for(current_set in 1:length(interaction_list)) {
-                            matching_cols <- new_data_updated[interaction_list[[current_set]]]
-                            updated_col <- apply(matching_cols, 1, prod)
-                            new_data_updated[interaction_vars[[current_set]]] <- updated_col
-                        }
-                    }
-                }
-            }
+            apply_slider_values(variable_config_list = variable_configuration,
+                                variables_to_drop = isolate(x_axis_raw_name()),
+                                append_name = "explore",
+                                # reactive link for when the sliders are visible
+                                update_target = base_new_data(),
+                                input_call = isolate(input),
+                                interaction_col_names = interaction_cols)
+        } else {
+            # reactive link for when the sliders are hidden
+            return(base_new_data())
         }
-        
-        return(new_data_updated)
     })
     
     # generate counterfactual data for the "Single Case" visualizations
-    sc_new_data <- reactive({
-        # get the current representative data from base_new_data()
-        new_data_updated <- isolate(base_new_data())
-        
+    sc_new_data <- reactive({        
         # establish the reactive link to the "Update" button
         input$update_sc_data
         
-        # index which variables are slider candidates
-        slider_index <- unlist(lapply(variable_configuration, 
-                                      function(x) x$slider_candidate == TRUE))
-        
-        # subset variable_configuration to just get the slider candidates
-        # (excluding the x-axis variabe)
-        selected_sliders <- variable_configuration[slider_index]
-        
-        # update the values based on current slider inputs
-        for(i in 1:length(selected_sliders)) {
-            # grab the key details
-            current_var <- names(selected_sliders)[[i]]
-            slider_name <- paste0("sc_", current_var)
-            slider_value <- isolate(input[[slider_name]])
-            
-            # all the input variables initialize as "NULL" - we want to avoid
-            # working with them until they've been assigned a value
-            # NOTE: input[[current_var]] IS a reactive link (actually a flexible 
-            #       set of reactive links) - it links to the sliders dynamically 
-            #       generated by the output$slider_set observer
-            if(!is.null(isolate(input[[slider_name]]))) {
-                # apply the relevant transformation to convert slider values
-                # to model-appropriate values
-                model_value <- selected_sliders[[current_var]]$transform_for_model(slider_value)
-                
-                # update the matching new_data_updated column with the 
-                # current slider value
-                new_data_updated[current_var] <- model_value
-                
-                # now test to see if the slider variable is part of any
-                # interactions
-                interaction_index <- grepl(paste(paste0(".", current_var), 
-                                                 paste0(current_var, "."), 
-                                                 sep = "|"),
-                                           names(new_data_updated))
-                if(any(interaction_index)) {
-                    # if we find interactions, we pull those terms out
-                    interaction_vars <- names(new_data_updated)[interaction_index]
-                    # create a list with the items in each term split
-                    interaction_list <- strsplit(interaction_vars, ".", fixed = T)
-                    # update the interaction variables by multiplying their
-                    # source columns together
-                    for(current_set in 1:length(interaction_list)) {
-                        matching_cols <- new_data_updated[interaction_list[[current_set]]]
-                        updated_col <- apply(matching_cols, 1, prod)
-                        new_data_updated[interaction_vars[[current_set]]] <- updated_col
-                    }
-                }
-            }
-        }
-        
-        
-        return(new_data_updated)
+        # make the sliders
+        # NOTE: there is only a single reactive pathway here - the "update_sc_
+        #       data" input must be triggered - this insures that the
+        #       visualization chain is only triggered on user request        
+        apply_slider_values(variable_config_list = variable_configuration,
+                            variables_to_drop = NA,
+                            append_name = "sc",
+                            update_target = isolate(base_new_data()),
+                            input_call = isolate(input),
+                            interaction_col_names = interaction_cols)
     })
     
     # feed the representative data to the sampled coefficients to generate
     # our final simulated outcome likelihoods
     explore_likelihoods <- reactive({
+        # get the unformatted summary likelihoods
         likelihoods_raw <- mlogitsimev_med(explore_new_data(), 
                                            coeff_estimates, 
                                            ci = c(0.95, 0.50))
-        # format the simulated outcome likelihoods for visualization
+        
+        # format the summary likelihoods for visualization
         ribbon_ready <- format_for_visualization(likelihoods_raw,
                                                  exp_model,
                                                  base_data,
@@ -332,28 +208,32 @@ shinyServer(function(input, output, session) {
                                                  isolate(x_axis_raw_name()),
                                                  facet_selected = isolate(facet_raw_name()))
         
+        # return the formatted object
         return(ribbon_ready)
     })
     
     # single case: feed the representative data to the sampled coefficients to generate
     # our final simulated outcome likelihoods
     sc_likelihoods <- reactive({
+        # get the unformatted summary likelihoods
         likelihoods_raw <- mlogitsimev_med(sc_new_data(), 
                                            coeff_estimates, 
                                            ci = c(0.95, 0.50))
-        # format the simulated outcome likelihoods for visualization
+        
+        # format the summary likelihoods for visualization
         errorbar_ready <- format_for_visualization(likelihoods_raw,
                                                    exp_model,
                                                    base_data,
-                                                   isolate(explore_new_data()),
-                                                   isolate(x_axis_raw_name()),
-                                                   facet_selected = isolate(facet_raw_name()))
+                                                   isolate(sc_new_data()),
+                                                   x_axis_selected = NA,
+                                                   facet_selected = NULL)
         
         # get single point estimates for the dot plot cloud
         likelihoods_cloud <- mlogitsimev_med(sc_new_data(), 
                                              coeff_estimates, 
                                              ci = c(0.95, 0.50),
                                              return_cloud = TRUE)
+        
         # format the single point estimates for visualization
         likelihoods_cloud <- data.frame(likelihoods_cloud)
         names(likelihoods_cloud) <- exp_model$lab
@@ -361,19 +241,22 @@ shinyServer(function(input, output, session) {
         dotplot_ready <- gather(likelihoods_cloud, outcome, single_pe, 
                                 -index)
         
-        # gather into a single object
+        # gather into a single collection
         collection <- list("eb" = errorbar_ready, 
                            "dp" = dotplot_ready)
         
+        # return the collection
         return(collection)
     })
     
     # visualize the outcome likelihoods
     output$ribbon_plot <- renderPlot({
-        # update the "predictor" in explore_likelihoods to make it ui friendly
+        # isolate the x_axis_variable name and its associated transform_for_ui
         x_axis_var <- isolate(x_axis_raw_name())
         ui_transform <- variable_configuration[[x_axis_var]]$transform_for_ui
         
+        # apply the transform to the predictor column in explore_likelihoods to 
+        # make it ui friendly
         ribbon_likelihoods <- explore_likelihoods()
         ribbon_likelihoods$predictor <- ui_transform(ribbon_likelihoods$predictor)
         
@@ -386,16 +269,20 @@ shinyServer(function(input, output, session) {
         )
     })
     
-    output$error_bar_plot <- renderPlot({
-        if(input$update_sc_data > 0) {
-            get_error_bar_plot(sc_likelihoods()$eb,
-                               y_lab = "Probability",
-                               x_lab = "Outcomes",
-                               custom_colors = portal_colors)
-        }
-    })
+#     output$error_bar_plot <- renderPlot({
+#         # make sure the update button has been clicked at least once (don't
+#         # draw until a user request has occurred)
+#         if(input$update_sc_data > 0) {
+#             get_error_bar_plot(sc_likelihoods()$eb,
+#                                y_lab = "Probability",
+#                                x_lab = "Outcomes",
+#                                custom_colors = portal_colors)
+#         }
+#     })
     
     output$dot_cloud_plot <- renderPlot({
+        # make sure the update button has been clicked at least once (don't
+        # draw until a user request has occurred)
         if(input$update_sc_data > 0) {
             get_dot_cloud_plot(sc_likelihoods()$dp,
                                y_lab = "Probability",
