@@ -49,18 +49,20 @@ source("COS custom mlogitsimev.R")
 ## USER DEFINED INPUTS
 
 # source the base data and base model
-load("data_model_V2.RData")
+load("data_model_V3.RData")
 
 # explicitly choose the data object we will be working with
 # NOTE: incomplete cases will be dropped to avoid modeling/plotting issues
 base_data <<- data[which(complete.cases(data)), ]
 
 # specify the formula for the base data object
-base_formula <<- outcome ~ mist_scores + wrkg_scores + recep_scores + 
-    log_age_eps_begin + non_min + male + log_par_age + married + hhnum_c + 
-    rel_plc + log_eps_rank + housing_hs_cnt + high_in + sm_coll + employ + REG +
-    buyn_scores +
-    high_in * housing_hs_cnt +
+base_formula <<- outcome ~ 
+    # additive terms
+    mist_scores + wrkg_scores + recep_scores + buyn_scores + log_age_eps_begin + 
+    non_min + male + log_par_age + married + hhnum_c + rel_plc + log_eps_rank + 
+    housing_hs_cnt + high_in + sm_coll + employ + REG + 
+    # interaction terms
+    high_in * housing_hs_cnt + 
     housing_hs_cnt * employ
 
 ###############################################################################
@@ -178,6 +180,7 @@ shinyServer(function(input, output, session) {
     # generate counterfactual data for the "Single Case" visualizations
     sc_new_data <- reactive({        
         # establish the reactive link to the "Update" button
+        #input$update_sc_data
         input$update_sc_data
         
         # make the sliders
@@ -283,11 +286,13 @@ shinyServer(function(input, output, session) {
     output$dot_cloud_plot <- renderPlot({
         # make sure the update button has been clicked at least once (don't
         # draw until a user request has occurred)
-        if(isolate(input$update_sc_data > 0)) {
+        if(input$update_sc_data > 0) {
             get_dot_cloud_plot(sc_likelihoods()$dp,
                                y_lab = "Probability",
                                x_lab = "Outcomes",
                                custom_colors = portal_colors)
+        } else {
+            get_dot_cloud_plot(NA)
         }
     })
 })

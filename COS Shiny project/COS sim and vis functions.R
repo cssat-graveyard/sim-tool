@@ -473,7 +473,32 @@ get_dot_cloud_plot <- function(formatted_likelihoods,
                                x_lab = "Outcome", 
                                y_lab = "p(Outcome)",
                                custom_colors = NULL) {
-    # build the plot object
+    # check if we've been given a blank data frame - if we have, we're going
+    # to return a special plot object with user instructions
+    if(is.na(formatted_likelihoods)) {
+        df <- data.frame()
+        
+        plot_object <- ggplot(df) +
+            geom_point() +
+            xlim(0, 1) +
+            ylim(0, 1) +
+            theme_bw() +
+            theme(
+                plot.background = element_blank(),
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                panel.border = element_blank(),
+                axis.ticks = element_blank(),
+                axis.text = element_blank()
+            ) #+
+           # annotate("text", x = 0, y = 0.5,
+           #          label = "Please set the sliders to match your case 
+           #          information. Then click 'Update'.")
+        
+        return(plot_object)
+    }
+    
+    # otherwise, build the proper plot object
     plot_object <- ggplot(formatted_likelihoods, 
                           aes(x = outcome, y = single_pe,
                               color = outcome, alpha = 0.10)) + 
