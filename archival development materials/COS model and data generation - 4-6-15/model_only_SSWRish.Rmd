@@ -538,8 +538,8 @@ levels(dat4$high_in) <- c("Annual Income Less than or Equal to $10,000"
 levels(dat4$sm_coll) <- c("High School or Below"
                           ,"More than High School")
 
-levels(dat4$employ) <- c("Unemployed"
-                         ,"Full or Part Time Employment")
+levels(dat4$employ) <- c("Full or Part Time Employment"
+                         ,"Unemployed")
 
 levels(dat4$REG) <- c("Region 2 South"
                       ,"Region 1 North"
@@ -552,16 +552,73 @@ levels(dat4$REG) <- c("Region 2 South"
 data <- dat4
 
 # run the multinomial model
-model <- multinom(outcome ~ . + employ*housing_hs_cnt +
-                    employ*high_in +
-                    employ*sm_coll +
-                    sm_coll*housing_hs_cnt +
-                    sm_coll*high_in + 
-                    high_in*housing_hs_cnt
+model <- multinom(outcome ~ mist_scores + wrkg_scores + recep_scores + 
+                  buyn_scores + log_age_eps_begin + non_min + male + log_par_age  + 
+                    married + hhnum_c + rel_plc + log_eps_rank + housing_hs_cnt + 
+                    high_in + sm_coll + employ + REG  + 
+                    high_in*housing_hs_cnt  + 
+                    housing_hs_cnt*employ
                  ,data = data
                  ,Hess = TRUE)
 
 #save objects for sim-tool
 save(data, model, file = "/Users/mienkoja/Dropbox/repos/sim-tool/data_model.RData")
+
+
+data_dictionary <- list()
+
+data_dictionary$outcome$label <- "Permanency Outcome"
+data_dictionary$outcome$definition <- "One of four permanency outcomes: Reunification, Adoption, Guardianship, or Emancipation."
+
+data_dictionary$mist_scores$label <- "Engagement: Mistrust"
+data_dictionary$mist_scores$definition <- "A parent's belief that the agency or worker is manipulative, malicious, or capricious, with intent to harm the client."
+
+data_dictionary$mist_scores$label <- "Engagement: Working Relationship"
+data_dictionary$mist_scores$definition <- "A parent's perception of the interpersonal relationship with worker characterized by a sense of reciprocity or mutuality and good communication."
+
+data_dictionary$recep_scores$label <- "Engagement: Receptivity"
+data_dictionary$recep_scores$definition <- "A parent's openness to receiving help, characterized by recognition of problems or circumstances that resulted in agency intervention and by a perceived need for help"
+
+data_dictionary$buyn_scores$label <- "Engagement: Buy-In"
+data_dictionary$buyn_scores$definition <- "A parent's perception of benefit; a sense of being helped or the expectation ofreceiving help through the agency’s involvement; a feeling that things are changing (or will change) for the better. Also includes a commitment to the helping process, characterized by active participation in planning or services, goal ownership, and initiative in seeking and using help."
+
+data_dictionary$log_age_eps_begin$label <- "Age at Episode Begin"
+data_dictionary$log_age_eps_begin$definition <- "The age of the child (in years) as of the start of their placement in out-of-home care"
+
+data_dictionary$non_min$label <- "Non-Minority"
+data_dictionary$non_min$definition <- "A indicator of whether the child is identified as some race other than White/Caucasian"
+
+data_dictionary$male$label <- "Gender"
+data_dictionary$male$definition <- "The gender of the child."
+
+data_dictionary$log_par_age$label <- "Age of Parent at Episode Begin"
+data_dictionary$log_par_age$definition <- "The age of the parent (in years) as of the start of their child(ren)'s  placement in out-of-home care"
+
+data_dictionary$log_par_age$label <- "Parental Marital Status"
+data_dictionary$log_par_age$definition <- "An indicator as to whether or not the parent claimed to be married at the point of interview."
+
+data_dictionary$hhnum_c$label <- "Number of Children in the Household"
+data_dictionary$hhnum_c$definition <- "The simple count of children in the household as reported by the parent at the point of survey."
+
+data_dictionary$rel_plc$label <- "Longest Placement with a Relative"
+data_dictionary$rel_plc$definition <- "An indicator as to whether or not the child spent the most time in out-of-home care in a relative placement."
+
+data_dictionary$log_eps_rank$label <- "Number of Prior Placements"
+data_dictionary$log_eps_rank$definition <- "The count of prior placements experienced by a child, as reported in administrative data."
+
+data_dictionary$housing_hs_cnt$label <- "Count of Housing Hardships"
+data_dictionary$housing_hs_cnt$definition <- "The count of affirmative responses to survey questions concerning housing hardships (e.g. difficulty paying rent, couch-surfing, etc.)."
+
+data_dictionary$high_in$label <- "Parental Income Status"
+data_dictionary$high_in$definition <- "An indicator as to whether or not the parent's reported income is less than (or equal to) 10,000 dollars."
+
+data_dictionary$sm_coll$label <- "Parental Education Level"
+data_dictionary$sm_coll$definition <- "An indicator as to whether or not the parent reported any education beyond high-school"
+
+data_dictionary$employ$label <- "Parental Employment Status"
+data_dictionary$employ$definition <- "An indicator as to whether or not the parent reported full or part-time employment"
+
+data_dictionary$REG$label <- "Administrative Region"
+data_dictionary$REG$definition <- "An indicator of the administrative region of the parent's child welfare case."
 
 ```
