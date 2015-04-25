@@ -85,6 +85,8 @@ library(dplyr)      # serves various formatting needs
 library(tidyr)      # for reformatting data for visualization
 library(ggplot2)    # for visualizing the data
 library(combinat)   # for building interaction term permutations
+library(scales)     # for nice plot scales
+library(grid)       # need for "unit" function passed to ggplot
 
 ###############################################################################
 ## FUNCTIONs TO GENERATE OUTCOME PREDICTIONS FOR GIVEN MODEL OBJECT
@@ -152,14 +154,15 @@ get_coefficient_estimates <- function(sample_size,
     # the model formula then subtract 1 for the outcome variable and 1 for the
     # reference variable
     number_arrays  <- length(model_object$lab) - 1
-    number_columns <- length(point_estimates)/number_arrays
+    number_columns <- length(point_estimates) / number_arrays
     number_rows    <- sample_size
     
     # then re-arrange simulates to array format for MNL simulation
     sim_beta_array <- array(NA, dim = c(number_rows, 
                                         number_columns, 
                                         number_arrays)
-    )  
+    ) 
+    
     index_starts <- seq(from = 1, to = number_columns * number_arrays, 
                         by = number_columns)
     for(i in 1:number_arrays) {
@@ -351,17 +354,18 @@ format_for_visualization <- function(raw_likelihoods,
     # (lower, upper, pe) - this should naturally repeat to the appropriate
     # length
     if(!is.na(x_axis_selected)) {
-        tidy_sim$predictor <- rep(counterfactuals[[x_axis_selected]])
+        tidy_sim$predictor <- counterfactuals[[x_axis_selected]]
     } else {
         # if no x-axis given, we just slap on a row-count
-        tidy_sim$predictor <- rep(1:nrow(counterfactuals))
+        #browser()
+        tidy_sim$predictor <- 1:nrow(counterfactuals)
     }
     # finally, if there is a facet variable set, we also add it as a grouping 
     # variable (create a new summary variable rather than deal with the 
     # already existing columns)
     if(!is.null(facet_selected)) {
         # we get the levels from the original data object
-        factor_levels <- with(base_data, levels(get(facet_selected)))
+        factor_levels <- levels(base_data[, facet_selected])
         # the number of repitions of the factor is determined by the length
         # of the x_axis variable / number of unique factor levels
         num_reps <- nrow(raw_likelihoods$upper) / length(factor_levels)
@@ -390,26 +394,33 @@ format_for_visualization <- function(raw_likelihoods,
 get_ribbon_plot <- function(formatted_likelihoods,
                             facet_selected = NULL,
                             x_lab = "Predictor", 
-                            y_lab = "p(Outcome)",
+                            y_lab = "Probability of Outcome",
                             custom_colors = NULL) {
     
     # build the plot object
-    plot_object <- ggplot(formatted_likelihoods, aes(x = predictor, y = pe, 
-                                                     group = outcome, 
-                                                     ymin = lower95, ymax = upper95)) + 
+    plot_object <- ggplot(formatted_likelihoods, 
+                          aes(x = predictor, y = pe, 
+                              group = outcome, 
+                              ymin = lower95, ymax = upper95)) + 
         # takes the ymin and ymax and draws a ribbon around the lines
         geom_ribbon(alpha = 0.5, aes(fill = outcome)) + 
         geom_ribbon(alpha = 0.5, aes(fill = outcome,
                                      ymin = lower50, ymax = upper50)) +
         #geom_line(aes(color = outcome)) +
         scale_y_continuous(limits = c(0, 1),
-                           labels = scales::percent,
+                           labels = percent,
                            expand = c(0, 0)) +
         scale_x_continuous(expand = c(0, 0)) +
         theme_bw(16) +
         theme(panel.grid.minor = element_blank(), 
               panel.grid.major = element_blank(),
-              strip.text = element_text(color = "white")) +
+              strip.text = element_text(color = "white"),
+              axis.text = element_text(size = 12),
+              axis.title.x = element_text(vjust = -3),
+              axis.title.y = element_text(vjust = 3),
+              plot.margin = grid::unit(c(1, 1, 1, 1), "cm")
+              ) +
+        guides(fill=guide_legend(title=NULL)) +
         xlab(x_lab) +
         ylab(y_lab)
     
@@ -434,7 +445,7 @@ get_ribbon_plot <- function(formatted_likelihoods,
 
 get_error_bar_plot <- function(formatted_likelihoods,
                                x_lab = "Outcome", 
-                               y_lab = "p(Outcome)",
+                               y_lab = "Probability of Outcome",
                                custom_colors = NULL) {
     # build the plot object
     plot_object <- ggplot(formatted_likelihoods, 
@@ -445,12 +456,17 @@ get_error_bar_plot <- function(formatted_likelihoods,
         geom_errorbar(aes(ymin = lower95, ymax = upper95,
                           width = 0.5)) +
         scale_y_continuous(limits = c(0, 1),
-                           labels = scales::percent) +
+                           labels = percent) +
         theme_bw() +
         theme(panel.grid.minor = element_blank(), 
               panel.grid.major = element_blank(),
-              strip.text = element_text(color = "white")) +
-        theme(legend.position="none") +
+              strip.text = element_text(color = "white"),
+              axis.text = element_text(size = 12),
+              axis.title.x = element_text(vjust = -3),
+              axis.title.y = element_text(vjust = 3),
+              plot.margin = grid::unit(c(1, 1, 1, 1), "cm")
+        ) +
+        theme(legend.position = "none") +
         xlab(x_lab) +
         ylab(y_lab) +
         coord_flip()
@@ -470,46 +486,28 @@ get_error_bar_plot <- function(formatted_likelihoods,
 }
 
 get_dot_cloud_plot <- function(formatted_likelihoods,
-                               x_lab = "Outcome", 
-                               y_lab = "p(Outcome)",
+                               x_lab = "Simulated Outcome Probability", 
+                               y_lab = "",
                                custom_colors = NULL) {
-    # check if we've been given a blank data frame - if we have, we're going
-    # to return a special plot object with user instructions
-    if(is.na(formatted_likelihoods)) {
-        df <- data.frame()
-        
-        plot_object <- ggplot(df) +
-            geom_point() +
-            xlim(0, 1) +
-            ylim(0, 1) +
-            theme_bw() +
-            theme(
-                plot.background = element_blank(),
-                panel.grid.major = element_blank(),
-                panel.grid.minor = element_blank(),
-                panel.border = element_blank(),
-                axis.ticks = element_blank(),
-                axis.text = element_blank()
-            ) #+
-           # annotate("text", x = 0, y = 0.5,
-           #          label = "Please set the sliders to match your case 
-           #          information. Then click 'Update'.")
-        
-        return(plot_object)
-    }
-    
-    # otherwise, build the proper plot object
+    # build the base plot object
     plot_object <- ggplot(formatted_likelihoods, 
                           aes(x = outcome, y = single_pe,
                               color = outcome, alpha = 0.10)) + 
         geom_jitter(position = position_jitter(width = 0.25, height = 0)) +
         scale_y_continuous(limits = c(0, 1),
                            labels = scales::percent) +
-        theme_bw() +
+        theme_bw(16) +
         theme(panel.grid.minor = element_blank(), 
               panel.grid.major = element_blank(),
-              strip.text = element_text(color = "white")) +
+              strip.text = element_text(color = "white"),
+              axis.text = element_text(size = 12),
+              axis.title.x = element_text(vjust = -3),
+              axis.title.y = element_text(vjust = 3),
+              plot.margin = grid::unit(c(1, 1, 1, 1), "cm"),
+              plot.title = element_text(vjust=2)
+        ) +
         theme(legend.position="none") +
+        ggtitle("The Likelihood of Each Outcome for 1000 Simulated Cases") +
         xlab(x_lab) +
         ylab(y_lab) +
         coord_flip()
@@ -716,6 +714,7 @@ get_interaction_col_names <- function(base_formula, exp_data) {
     formula_parsed <- gsub(" ", "", unlist(formula_parsed))
     
     # now we collect just those terms that have an interaction symbol "*"
+    # TODO check for : to mark interactions
     interaction_terms <- grep("*", formula_parsed, fixed = TRUE, value = TRUE)
     
     # quickly check to see if there are any interaction terms at all - if none

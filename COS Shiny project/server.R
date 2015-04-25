@@ -65,6 +65,26 @@ base_formula <<- outcome ~
     high_in * housing_hs_cnt + 
     housing_hs_cnt * employ
 
+base_formula2 <<- outcome ~ 
+    # additive terms
+    mist_scores + wrkg_scores + recep_scores + buyn_scores + log_age_eps_begin + 
+    non_min + male + log_par_age + married + hhnum_c + rel_plc + log_eps_rank + 
+    sm_coll + employ + REG + 
+    # interaction terms
+    high_in * housing_hs_cnt + 
+    housing_hs_cnt * employ
+
+
+base_formula3 <<- outcome ~ 
+    # additive terms
+    mist_scores + wrkg_scores + recep_scores + buyn_scores + log_age_eps_begin + 
+    non_min + male + log_par_age + married + hhnum_c + rel_plc + log_eps_rank + 
+    housing_hs_cnt + high_in + sm_coll + employ + REG + 
+    # interaction terms
+    high_in : housing_hs_cnt + 
+    housing_hs_cnt : employ
+
+
 ###############################################################################
 ## PREPARE BASE DATA FOR SIMULATION/VISUALIZATION (EXPANSION, STATIC FEATURES)
 
@@ -266,7 +286,7 @@ shinyServer(function(input, output, session) {
         # draw the plot
         get_ribbon_plot(ribbon_likelihoods, 
                         facet_selected = isolate(facet_raw_name()),
-                        y_lab = "Probability", 
+                        y_lab = "Simulated Probability", 
                         x_lab = isolate(input$x_axis_choice),
                         custom_colors = portal_colors
         )
@@ -288,11 +308,9 @@ shinyServer(function(input, output, session) {
         # draw until a user request has occurred)
         if(input$update_sc_data > 0) {
             get_dot_cloud_plot(sc_likelihoods()$dp,
-                               y_lab = "Probability",
-                               x_lab = "Outcomes",
+                               y_lab = "Simulated Outcome Probability",
+                               x_lab = "",
                                custom_colors = portal_colors)
-        } else {
-            get_dot_cloud_plot(NA)
         }
     })
 })

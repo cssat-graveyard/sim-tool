@@ -33,6 +33,7 @@
 ###############################################################################
 ## LOAD SUPPORTING LIBRARIES
 library(dplyr)      # serves various formatting needs
+library(shinyBS)    # expands base Shiny features (e.g., popovers)
 
 ###############################################################################
 ## CONFIGURATION SETTINGS
@@ -62,43 +63,48 @@ library(dplyr)      # serves various formatting needs
 # )
 variable_configuration <<- list(   
     mist_scores = list(
-        pretty_name         = "Parent Mistrust",
+        pretty_name         = "Engagement: Mistrust",
+        definition          = "A parent's belief that the agency or worker is manipulative, malicious, or capricious, with intent to harm the client.",
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
-        slider_rounding     = NA,
+        slider_rounding     = 1,
         facet_candidate     = FALSE,
         transform_for_ui    = function(x) x + 3,
         transform_for_model = function(x) x - 3
     ),    
     wrkg_scores = list(
-        pretty_name         = "Parent/SW Relationship",
+        pretty_name         = "Engagement: Working Relationship",
+        definition          = "A parent's perception of the interpersonal relationship with worker characterized by a sense of reciprocity or mutuality and good communication.",
         x_axis_candidate    = TRUE,    
         slider_candidate    = TRUE,
-        slider_rounding     = NA,
+        slider_rounding     = 1,
         facet_candidate     = FALSE,
         transform_for_ui    = function(x) x + 3,
         transform_for_model = function(x) x - 3
     ),   
     recep_scores = list(
-        pretty_name         = "Parent Receptivity",
+        pretty_name         = "Engagement: Receptivity",
+        definition          = "A parent's openness to receiving help, characterized by recognition of problems or circumstances that resulted in agency intervention and by a perceived need for help",
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
-        slider_rounding     = NA,
+        slider_rounding     = 1,
         facet_candidate     = FALSE,
         transform_for_ui    = function(x) x + 3,
         transform_for_model = function(x) x - 3
     ),    
     buyn_scores = list(
-        pretty_name         = "Parent Buy-in",
+        pretty_name         = "Engagement: Buy-In",
+        definition          = "A parent's perception of benefit; a sense of being helped or the expectation ofreceiving help through the agency's involvement; a feeling that things are changing (or will change) for the better. Also includes a commitment to the helping process, characterized by active participation in planning or services, goal ownership, and initiative in seeking and using help.",
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
-        slider_rounding     = NA,
+        slider_rounding     = 1,
         facet_candidate     = FALSE,
         transform_for_ui    = function(x) x + 3,
         transform_for_model = function(x) x - 3
     ),    
     log_age_eps_begin = list(
-        pretty_name         = "Age at Removal",
+        pretty_name         = "Age at Episode Begin",
+        definition          = "The age of the child (in years) as of the start of their placement in out-of-home care.",
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -108,6 +114,7 @@ variable_configuration <<- list(
     ),  
     housing_hs_cnt = list(
         pretty_name         = "Count of Housing Hardships",
+        definition          = "The count of affirmative responses to survey questions concerning housing hardships (e.g. difficulty paying rent, couch-surfing, etc.).",
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -116,7 +123,8 @@ variable_configuration <<- list(
         transform_for_model = identity
     ),   
     REG = list(
-        pretty_name         = "Region",
+        pretty_name         = "Administrative Region",
+        definition          = "An indicator of the administrative region of the parent's child welfare case.",
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -125,7 +133,8 @@ variable_configuration <<- list(
         transform_for_model = identity
     ),
     employ = list(
-        pretty_name         = "Employment Status",
+        pretty_name         = "Parental Employment Status",
+        definition          = "An indicator as to whether or not the parent reported full or part-time employment.",
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -134,7 +143,8 @@ variable_configuration <<- list(
         transform_for_model = identity
     ),
     sm_coll = list(
-        pretty_name         = "Educational Level",
+        pretty_name         = "Parental Education Level",
+        definition          = "An indicator as to whether or not the parent reported any education beyond high-school.",
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -143,7 +153,8 @@ variable_configuration <<- list(
         transform_for_model = identity
     ),
     high_in = list(
-        pretty_name         = "Income",
+        pretty_name         = "Parental Income Status",
+        definition          = "An indicator as to whether or not the parent's reported income is less than (or equal to) 10,000 dollars.",
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -202,33 +213,46 @@ raw_pretty_pairs <<- as.data.frame(raw_pretty_pairs)$pretty_name
 shinyUI(navbarPage(
     "The Case Outcome Simulator",
     
-    # using COS to explore across a range ("Explore Mode")
+    # using COS to explore trends per predictor ("Explore Mode")
     tabPanel("Explore Mode", fluidPage(
         # define user tools in the first column
         # width = 3 of 12 (Shiny divides the horizontal space up into 12 sections)
         column(3, 
                wellPanel(               
-                   radioButtons("x_axis_choice", label = h3("Select X-Axis"), 
+                   radioButtons("x_axis_choice", label = h4("Select X-Axis"), 
                                 choices = fixed_ui_options$x_axis_options),
                    
+                   bsPopover("x_axis_choice",
+                             title = "What are these?",
+                             content = paste0("<p>Things you should know.",
+                                              "Seriously - know them. ",
+                                              "Or else.... you know. </p>"
+                             ),
+                             trigger = "click",
+                             placement = "bottom"),
+                   
                    radioButtons("facet_choice", 
-                                label = h3("Facet Choice"),
+                                label = h4("Compare By..."),
                                 choices = c("None", 
                                             fixed_ui_options$facet_options))
                ),
                
-               wellPanel(
-                   helpText("Adjust fixed (non-x-axis) predictors."), 
+               wellPanel( 
+                   # popout text for "Advanced Options" object: "The x-axis and - if selected - facet predictors are visible. All other predictors are set to their mean value. Adjust a slider to explore how changes in that predictor impact the relationship between the x-axis variable and the likelihood of particular outcomes."
+                   helpText(h4("Advanced Options")),
                    
                    checkboxInput("slider_show", 
-                                 label = "Show sliders?",
+                                 label = "Show?",
                                  FALSE),
                    
                    conditionalPanel(
+                       # only show if the "Advanced Options" box is ticked
                        condition = "input.slider_show == true",
                        
                        actionButton("update_explore_data",
-                                    "Update"),
+                                    "Update Plot"),
+                       br(),
+                       br(),
                        
                        uiOutput("explore_slider_set")
                    )
@@ -242,18 +266,23 @@ shinyUI(navbarPage(
         )
     )),
     
+    # using COS to simulate outcomes for fixed predictor values ("Explore Mode")
     tabPanel("Single Case Mode", fluidPage(
+        # define user tools in the first column
         column(3, 
                wellPanel(
-                   actionButton("update_sc_data",
-                                "Update"),
+                   helpText(h4("Case Values")),
                    
-                   helpText("Adjust predictors."),
+                   actionButton("update_sc_data",
+                                "Simulate"),
+                   br(),
+                   br(),
                    
                    uiOutput("sc_slider_set")
                )
         ),
         
+        # define the visualization in the second column
         column(9,
 #                plotOutput("error_bar_plot"),
                
