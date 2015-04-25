@@ -24,6 +24,11 @@ Source: CRAN
 Version: 1.1-2
 Hash: 5203278413b09be06483c5ac1920bb05
 
+Package: RJSONIO
+Source: CRAN
+Version: 1.3-0
+Hash: 8b1341dfd547c90ed4b3365d5aa46a7b
+
 Package: RODBC
 Source: CRAN
 Version: 1.3-11
@@ -129,6 +134,12 @@ Source: CRAN
 Version: 0.2.6
 Hash: 2c87108d130de261ac3c468d3316ae42
 Requires: digest
+
+Package: httpuv
+Source: CRAN
+Version: 1.3.2
+Hash: 1534fecf898455255e27d84e6ce94e2d
+Requires: Rcpp
 
 Package: knitr
 Source: CRAN
@@ -241,6 +252,18 @@ Version: 0.2.4
 Hash: b8b1af97bd07818605223060386b00dd
 Requires: RColorBrewer, dichromat, labeling, munsell, plyr
 
+Package: shiny
+Source: CRAN
+Version: 0.11.1
+Hash: d09cdcd85e54b44e91af964cb979508f
+Requires: R6, digest, mime, htmltools, RJSONIO, httpuv, xtable
+
+Package: shinyBS
+Source: CRAN
+Version: 0.61
+Hash: 48a948722d53ae93d189c24be31a28a8
+Requires: htmltools, shiny
+
 Package: simcf
 Source: github
 Version: 0.2.9
@@ -265,6 +288,11 @@ Source: CRAN
 Version: 0.2.0
 Hash: 3b379415e9e88d4f559b380819893304
 Requires: dplyr, lazyeval, reshape2, stringi
+
+Package: xtable
+Source: CRAN
+Version: 1.7-4
+Hash: 7b30b5ca6c7ae80c4f916502e3ad0237
 
 Package: yaml
 Source: CRAN

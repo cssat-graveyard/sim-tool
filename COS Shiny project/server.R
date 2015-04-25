@@ -49,7 +49,7 @@ source("COS custom mlogitsimev.R")
 ## USER DEFINED INPUTS
 
 # source the base data and base model
-load("data_model_V3.RData")
+load("data_model_V4.RData")
 
 # explicitly choose the data object we will be working with
 # NOTE: incomplete cases will be dropped to avoid modeling/plotting issues
