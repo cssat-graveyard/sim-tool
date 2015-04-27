@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 4/21/2015
+# Date updated: 4/27/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -177,27 +177,35 @@ portal_colors <<- c("#D9BB32", "#6DB33F", "#6E9CAE", "#B1662B", "#5B8067",
 # generated statically - such as the x-axis choices - rather than dynamically -
 # such as the sliders)
 get_fixed_ui_options <- function(variable_config_list) {
-    # collect the x-axis options names
+    # collect the x-axis options names and definitions
     x_axis_options <- c()
+    x_axis_definitions <- c()
     for(index in 1:length(variable_config_list)) {
         if(variable_config_list[[index]]$x_axis_candidate) {
             current_name <- variable_config_list[[index]]$pretty_name
+            current_def <- variable_config_list[[index]]$definition
             x_axis_options <- c(x_axis_options, current_name)
+            x_axis_definitions <- c(x_axis_definitions, current_def)
         }
     }
     
-    # collect the facet options names
+    # collect the facet options names and definitions
     facet_options <- c()
+    facet_definitions <- c()
     for(index in 1:length(variable_config_list)) {
         if(variable_config_list[[index]]$facet_candidate) {
             current_name <- variable_config_list[[index]]$pretty_name
+            current_def <- variable_config_list[[index]]$definition
             facet_options <- c(facet_options, current_name)
+            facet_definitions <- c(x_axis_definitions, current_def)
         }
     }
     
     # return all option collections
     list(x_axis_options = x_axis_options, 
-         facet_options  = facet_options)
+         x_axis_definitions = x_axis_definitions,
+         facet_options  = facet_options,
+         facet_definitions = facet_definitions)
 }
 
 fixed_ui_options <<- get_fixed_ui_options(variable_configuration)
@@ -223,23 +231,37 @@ shinyUI(navbarPage(
                                 choices = fixed_ui_options$x_axis_options),
                    
                    bsPopover("x_axis_choice",
-                             title = "What are these?",
-                             content = paste0("<p>Things you should know.",
-                                              "Seriously - know them. ",
-                                              "Or else.... you know. </p>"
-                             ),
+                             title = "Variable Definitions.",
+                             #                              content = paste(
+                             #                                  c("<p>",
+                             #                                  fixed_ui_options$x_axis_definitions,
+                             #                                  "</p>"),
+                             #                                  collapse = "<br><br>"),
+                             content = "<p>Resolving length issues.</p>",
                              trigger = "click",
                              placement = "bottom"),
                    
                    radioButtons("facet_choice", 
                                 label = h4("Compare By..."),
                                 choices = c("None", 
-                                            fixed_ui_options$facet_options))
+                                            fixed_ui_options$facet_options)),
+                   
+                   bsPopover("facet_choice", 
+                             title = "Variable Definitions.",
+                             content = "<p>Resolving length issues.</p>",
+                             trigger = "click",
+                             placement = "bottom")
+                   
                ),
                
                wellPanel( 
                    # popout text for "Advanced Options" object: "The x-axis and - if selected - facet predictors are visible. All other predictors are set to their mean value. Adjust a slider to explore how changes in that predictor impact the relationship between the x-axis variable and the likelihood of particular outcomes."
-                   helpText(h4("Advanced Options")),
+                   popify(helpText(h4("Advanced Options")), 
+                          title = "What is This?",
+                          content = "EXPLANATION.",
+                          trigger = "click",
+                          placement = "bottom"
+                   ),
                    
                    checkboxInput("slider_show", 
                                  label = "Show?",
@@ -284,7 +306,7 @@ shinyUI(navbarPage(
         
         # define the visualization in the second column
         column(9,
-#                plotOutput("error_bar_plot"),
+               #                plotOutput("error_bar_plot"),
                
                plotOutput("dot_cloud_plot")
         )

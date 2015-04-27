@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 4/21/2015
+# Date updated: 4/27/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -159,12 +159,14 @@ shinyServer(function(input, output, session) {
     
     # generate representative data to feed coefficients
     base_new_data <- reactive({
-        get_new_data(exp_data,
-                     base_data,
-                     exp_model, 
-                     x_axis_raw_name(), 
-                     facet_selected = facet_raw_name(),
-                     interaction_col_names = interaction_cols)
+        suppressWarnings(
+            get_new_data(exp_data,
+                         base_data,
+                         exp_model, 
+                         x_axis_raw_name(), 
+                         facet_selected = facet_raw_name(),
+                         interaction_col_names = interaction_cols)
+        )
     })
     
     # generate counterfactual data for the "Explore Mode" visualizations
@@ -184,13 +186,15 @@ shinyServer(function(input, output, session) {
         #          explore_new_data() and resets the sliders if they are 
         #          visible)
         if(isolate(input$slider_show)) {
-            apply_slider_values(variable_config_list = variable_configuration,
-                                variables_to_drop = isolate(x_axis_raw_name()),
-                                append_name = "explore",
-                                # reactive link for when the sliders are visible
-                                update_target = base_new_data(),
-                                input_call = isolate(input),
-                                interaction_col_names = interaction_cols)
+            suppressWarnings(
+                apply_slider_values(variable_config_list = variable_configuration,
+                                    variables_to_drop = isolate(x_axis_raw_name()),
+                                    append_name = "explore",
+                                    # reactive link for when the sliders are visible
+                                    update_target = base_new_data(),
+                                    input_call = isolate(input),
+                                    interaction_col_names = interaction_cols)
+            )
         } else {
             # reactive link for when the sliders are hidden
             return(base_new_data())
@@ -207,12 +211,14 @@ shinyServer(function(input, output, session) {
         # NOTE: there is only a single reactive pathway here - the "update_sc_
         #       data" input must be triggered - this insures that the
         #       visualization chain is only triggered on user request        
-        apply_slider_values(variable_config_list = variable_configuration,
-                            variables_to_drop = NA,
-                            append_name = "sc",
-                            update_target = isolate(base_new_data()),
-                            input_call = isolate(input),
-                            interaction_col_names = interaction_cols)
+        suppressWarnings(
+            apply_slider_values(variable_config_list = variable_configuration,
+                                variables_to_drop = NA,
+                                append_name = "sc",
+                                update_target = isolate(base_new_data()),
+                                input_call = isolate(input),
+                                interaction_col_names = interaction_cols)
+        )
     })
     
     # feed the representative data to the sampled coefficients to generate
@@ -292,16 +298,16 @@ shinyServer(function(input, output, session) {
         )
     })
     
-#     output$error_bar_plot <- renderPlot({
-#         # make sure the update button has been clicked at least once (don't
-#         # draw until a user request has occurred)
-#         if(input$update_sc_data > 0) {
-#             get_error_bar_plot(sc_likelihoods()$eb,
-#                                y_lab = "Probability",
-#                                x_lab = "Outcomes",
-#                                custom_colors = portal_colors)
-#         }
-#     })
+    #     output$error_bar_plot <- renderPlot({
+    #         # make sure the update button has been clicked at least once (don't
+    #         # draw until a user request has occurred)
+    #         if(input$update_sc_data > 0) {
+    #             get_error_bar_plot(sc_likelihoods()$eb,
+    #                                y_lab = "Probability",
+    #                                x_lab = "Outcomes",
+    #                                custom_colors = portal_colors)
+    #         }
+    #     })
     
     output$dot_cloud_plot <- renderPlot({
         # make sure the update button has been clicked at least once (don't

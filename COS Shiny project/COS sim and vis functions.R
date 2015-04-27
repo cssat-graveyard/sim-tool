@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/25/2015
-# Date updated: 4/22/2015
+# Date updated: 4/27/2015
 
 # NOTE: Functions were largely developed in the "gator model example V3.R"
 #       script. That script was archived to allow us to seperate the model
@@ -357,7 +357,6 @@ format_for_visualization <- function(raw_likelihoods,
         tidy_sim$predictor <- counterfactuals[[x_axis_selected]]
     } else {
         # if no x-axis given, we just slap on a row-count
-        #browser()
         tidy_sim$predictor <- 1:nrow(counterfactuals)
     }
     # finally, if there is a facet variable set, we also add it as a grouping 
@@ -419,7 +418,7 @@ get_ribbon_plot <- function(formatted_likelihoods,
               axis.title.x = element_text(vjust = -3),
               axis.title.y = element_text(vjust = 3),
               plot.margin = grid::unit(c(1, 1, 1, 1), "cm")
-              ) +
+        ) +
         guides(fill=guide_legend(title=NULL)) +
         xlab(x_lab) +
         ylab(y_lab)
@@ -596,7 +595,7 @@ make_sliders <- function(variable_config_list,
     # (excluding the x-axis variabe)
     selected_sliders <- variable_config_list[slider_index]
     
-    # generate the sliders
+    # generate the sliders (and their popovers)
     lapply(1:length(selected_sliders), function(i) {
         sliderInput(
             inputId = paste0(append_name,
