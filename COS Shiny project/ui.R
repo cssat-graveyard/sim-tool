@@ -31,9 +31,12 @@
 #   - define the visualization
 
 ###############################################################################
-## LOAD SUPPORTING LIBRARIES
+## LOAD SUPPORTING LIBRARIES AND SET ANY DEFAULT OPTIONS
 library(dplyr)      # serves various formatting needs
 library(shinyBS)    # expands base Shiny features (e.g., popovers)
+library(Cairo)      # supports plot quality across devices
+
+options(shiny.usecairo=T)
 
 ###############################################################################
 ## CONFIGURATION SETTINGS
@@ -220,6 +223,7 @@ raw_pretty_pairs <<- as.data.frame(raw_pretty_pairs)$pretty_name
 
 shinyUI(navbarPage(
     "The Case Outcome Simulator",
+    theme = "bootstrap.css",
     
     # using COS to explore trends per predictor ("Explore Mode")
     tabPanel("Explore Mode", fluidPage(
@@ -292,7 +296,16 @@ shinyUI(navbarPage(
         # define the visualization in the second column
         # width = 9 of 12
         column(9, 
-               plotOutput("ribbon_plot")
+               plotOutput("ribbon_plot"),
+               
+               wellPanel(
+                   strong("What does this graph show us?"),
+                   p("This graph shows the relationship between a selected ",
+                     "predictor (X-Axis choice) and the simulated likelihood ",
+                     "of RAGE outcomes at different levels of that predictor."),
+                   p("The simulation is modeled on real data collected from ",
+                     "a limited selection of Washington State welfare data.")
+               )
         )
     )),
     
@@ -316,7 +329,21 @@ shinyUI(navbarPage(
         column(9,
                #                plotOutput("error_bar_plot"),
                
-               plotOutput("dot_cloud_plot")
+               plotOutput("dot_cloud_plot"),
+               
+               wellPanel(
+                   strong("What does this graph show us?"),
+                   p("Each time the 'SIMULATE' button is clicked, 1000 child ",
+                     "welfare cases are simulated for the values you set the ",
+                     "sliders to."),
+                   p("Then we plot how likely each RAGE outcome is for each ",
+                     "case."),
+                   p("The final graph gives us a sense of which outcomes tend ",
+                     "to be more likely and how much uncertainty there is in ",
+                     "the simulation."),
+                   p("The simulation is modeled on real data collected from ",
+                     "a limited selection of Washington State welfare data.")
+               )
         )
     ))
 ))

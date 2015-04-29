@@ -424,7 +424,8 @@ get_ribbon_plot <- function(formatted_likelihoods,
               axis.text = element_text(size = 12),
               axis.title.x = element_text(vjust = -3),
               axis.title.y = element_text(vjust = 3),
-              plot.margin = grid::unit(c(1, 1, 1, 1), "cm")
+              plot.margin = grid::unit(c(1, 1, 1, 1), "cm"),
+              aspect.ratio = 2 / (1 + sqrt(5))
         ) +
         guides(fill=guide_legend(title=NULL)) +
         xlab(x_lab) +
@@ -470,7 +471,8 @@ get_error_bar_plot <- function(formatted_likelihoods,
               axis.text = element_text(size = 12),
               axis.title.x = element_text(vjust = -3),
               axis.title.y = element_text(vjust = 3),
-              plot.margin = grid::unit(c(1, 1, 1, 1), "cm")
+              plot.margin = grid::unit(c(1, 1, 1, 1), "cm"),
+              aspect.ratio = 2 / (1 + sqrt(5))
         ) +
         theme(legend.position = "none") +
         xlab(x_lab) +
@@ -510,6 +512,7 @@ get_dot_cloud_plot <- function(formatted_likelihoods,
               axis.title.x = element_text(vjust = -3),
               axis.title.y = element_text(vjust = 3),
               plot.margin = grid::unit(c(1, 1, 1, 1), "cm"),
+              aspect.ratio = 2 / (1 + sqrt(5)),
               plot.title = element_text(vjust=2)
         ) +
         theme(legend.position="none") +
