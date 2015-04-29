@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 4/27/2015
+# Date updated: 4/29/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -64,7 +64,7 @@ library(shinyBS)    # expands base Shiny features (e.g., popovers)
 variable_configuration <<- list(   
     mist_scores = list(
         pretty_name         = "Engagement: Mistrust",
-        definition          = "A parent's belief that the agency or worker is manipulative, malicious, or capricious, with intent to harm the client.",
+        definition          = "Parental belief that the agency or worker is manipulative, malicious, or capricious, with intent to harm the client.",
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -74,7 +74,7 @@ variable_configuration <<- list(
     ),    
     wrkg_scores = list(
         pretty_name         = "Engagement: Working Relationship",
-        definition          = "A parent's perception of the interpersonal relationship with worker characterized by a sense of reciprocity or mutuality and good communication.",
+        definition          = "Parental perception of the interpersonal relationship with worker characterized by a sense of reciprocity or mutuality and good communication.",
         x_axis_candidate    = TRUE,    
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -84,7 +84,7 @@ variable_configuration <<- list(
     ),   
     recep_scores = list(
         pretty_name         = "Engagement: Receptivity",
-        definition          = "A parent's openness to receiving help, characterized by recognition of problems or circumstances that resulted in agency intervention and by a perceived need for help",
+        definition          = "Parental openness to receiving help, characterized by recognition of problems or circumstances that resulted in agency intervention and by a perceived need for help",
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -94,7 +94,7 @@ variable_configuration <<- list(
     ),    
     buyn_scores = list(
         pretty_name         = "Engagement: Buy-In",
-        definition          = "A parent's perception of benefit; a sense of being helped or the expectation ofreceiving help through the agency's involvement; a feeling that things are changing (or will change) for the better. Also includes a commitment to the helping process, characterized by active participation in planning or services, goal ownership, and initiative in seeking and using help.",
+        definition          = "Parental perception of benefit; a sense of being helped or the expectation of receiving help through the agency involvement; a feeling that things are changing (or will change) for the better. Also includes a commitment to the helping process, characterized by active participation in planning or services, goal ownership, and initiative in seeking and using help.",
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -124,7 +124,7 @@ variable_configuration <<- list(
     ),   
     REG = list(
         pretty_name         = "Administrative Region",
-        definition          = "An indicator of the administrative region of the parent's child welfare case.",
+        definition          = "An indicator of the administrative region of the child welfare case.",
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -154,7 +154,7 @@ variable_configuration <<- list(
     ),
     high_in = list(
         pretty_name         = "Parental Income Status",
-        definition          = "An indicator as to whether or not the parent's reported income is less than (or equal to) 10,000 dollars.",
+        definition          = "An indicator as to whether or not the reported parental income is less than (or equal to) 10,000 dollars.",
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -182,9 +182,9 @@ get_fixed_ui_options <- function(variable_config_list) {
     x_axis_definitions <- c()
     for(index in 1:length(variable_config_list)) {
         if(variable_config_list[[index]]$x_axis_candidate) {
-            current_name <- variable_config_list[[index]]$pretty_name
-            current_def <- variable_config_list[[index]]$definition
-            x_axis_options <- c(x_axis_options, current_name)
+            current_name       <- variable_config_list[[index]]$pretty_name
+            current_def        <- variable_config_list[[index]]$definition
+            x_axis_options     <- c(x_axis_options, current_name)
             x_axis_definitions <- c(x_axis_definitions, current_def)
         }
     }
@@ -194,18 +194,18 @@ get_fixed_ui_options <- function(variable_config_list) {
     facet_definitions <- c()
     for(index in 1:length(variable_config_list)) {
         if(variable_config_list[[index]]$facet_candidate) {
-            current_name <- variable_config_list[[index]]$pretty_name
-            current_def <- variable_config_list[[index]]$definition
-            facet_options <- c(facet_options, current_name)
-            facet_definitions <- c(x_axis_definitions, current_def)
+            current_name      <- variable_config_list[[index]]$pretty_name
+            current_def       <- variable_config_list[[index]]$definition
+            facet_options     <- c(facet_options, current_name)
+            facet_definitions <- c(facet_definitions, current_def)
         }
     }
     
     # return all option collections
-    list(x_axis_options = x_axis_options, 
+    list(x_axis_options     = x_axis_options, 
          x_axis_definitions = x_axis_definitions,
-         facet_options  = facet_options,
-         facet_definitions = facet_definitions)
+         facet_options      = facet_options,
+         facet_definitions  = facet_definitions)
 }
 
 fixed_ui_options <<- get_fixed_ui_options(variable_configuration)
@@ -232,14 +232,16 @@ shinyUI(navbarPage(
                    
                    bsPopover("x_axis_choice",
                              title = "Variable Definitions.",
-                             #                              content = paste(
-                             #                                  c("<p>",
-                             #                                  fixed_ui_options$x_axis_definitions,
-                             #                                  "</p>"),
-                             #                                  collapse = "<br><br>"),
-                             content = "<p>Resolving length issues.</p>",
+                             content = paste(
+                                 "<strong>",
+                                 fixed_ui_options$x_axis_options,
+                                 "</strong>",
+                                 "<br>",
+                                 fixed_ui_options$x_axis_definitions,
+                                 "<br><br>"),
                              trigger = "click",
-                             placement = "bottom"),
+                             placement = "right",
+                             options = list(container = "body")),
                    
                    radioButtons("facet_choice", 
                                 label = h4("Compare By..."),
@@ -248,17 +250,23 @@ shinyUI(navbarPage(
                    
                    bsPopover("facet_choice", 
                              title = "Variable Definitions.",
-                             content = "<p>Resolving length issues.</p>",
+                             content = paste(
+                                 "<strong>",
+                                 fixed_ui_options$facet_options,
+                                 "</strong>",
+                                 "<br>",
+                                 fixed_ui_options$facet_definitions,
+                                 "<br><br>"),
                              trigger = "click",
-                             placement = "bottom")
+                             placement = "right",
+                             options = list(container = "body"))
                    
                ),
                
                wellPanel( 
-                   # popout text for "Advanced Options" object: "The x-axis and - if selected - facet predictors are visible. All other predictors are set to their mean value. Adjust a slider to explore how changes in that predictor impact the relationship between the x-axis variable and the likelihood of particular outcomes."
                    popify(helpText(h4("Advanced Options")), 
                           title = "What is This?",
-                          content = "EXPLANATION.",
+                          content = "This section allows you to explore how changes in unselected predictors impact the relationship between the selected x-axis predictor and simulated outcome likelihoods.",
                           trigger = "click",
                           placement = "bottom"
                    ),

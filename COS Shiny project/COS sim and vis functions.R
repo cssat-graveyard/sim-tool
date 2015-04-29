@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/25/2015
-# Date updated: 4/27/2015
+# Date updated: 4/29/2015
 
 # NOTE: Functions were largely developed in the "gator model example V3.R"
 #       script. That script was archived to allow us to seperate the model
@@ -322,7 +322,8 @@ format_for_visualization <- function(raw_likelihoods,
                                      base_data,
                                      counterfactuals,
                                      x_axis_selected = NA, 
-                                     facet_selected = NULL) {
+                                     facet_selected = NULL,
+                                     explicit_outcome_order = NA) {
     
     # the mlogit structure is a collection of arrays but ggplot wants dataframes
     # first we extract the arrays as matrices and bind them together
@@ -385,6 +386,12 @@ format_for_visualization <- function(raw_likelihoods,
                            -predictor)
     }
     tidy_sim <- spread(tidy_sim, measure_type, likelihood)
+    
+    # check if an explicit order is provided for the levels of the "outcome"
+    # variable - apply it if given
+    if(!is.na(explicit_outcome_order)) {
+        tidy_sim$outcome <- factor(tidy_sim$outcome, explicit_outcome_order)
+    }
     
     # returning our visualization-ready data
     return(tidy_sim)
@@ -508,6 +515,7 @@ get_dot_cloud_plot <- function(formatted_likelihoods,
         theme(legend.position="none") +
         ggtitle("The Likelihood of Each Outcome for 1000 Simulated Cases") +
         xlab(x_lab) +
+        scale_x_discrete(limits = rev(levels(formatted_likelihoods$outcome))) +
         ylab(y_lab) +
         coord_flip()
     
@@ -597,17 +605,23 @@ make_sliders <- function(variable_config_list,
     
     # generate the sliders (and their popovers)
     lapply(1:length(selected_sliders), function(i) {
-        sliderInput(
-            inputId = paste0(append_name,
-                             "_",
-                             names(selected_sliders)[i]), 
-            label   = selected_sliders[[i]]$pretty_name,
-            min     = selected_sliders[[i]]$ui_min, 
-            max     = selected_sliders[[i]]$ui_max,
-            value   = selected_sliders[[i]]$ui_median,
-            step    = ifelse(is.na(selected_sliders[[i]]$slider_rounding),
-                             0.01,
-                             selected_sliders[[i]]$slider_rounding)
+        popify(
+            sliderInput(
+                inputId = paste0(append_name,
+                                 "_",
+                                 names(selected_sliders)[i]), 
+                label   = selected_sliders[[i]]$pretty_name,
+                min     = selected_sliders[[i]]$ui_min, 
+                max     = selected_sliders[[i]]$ui_max,
+                value   = selected_sliders[[i]]$ui_median,
+                step    = ifelse(is.na(selected_sliders[[i]]$slider_rounding),
+                                 0.01,
+                                 selected_sliders[[i]]$slider_rounding)),
+            
+            title     = selected_sliders[[i]]$pretty_name,
+            content   = selected_sliders[[i]]$definition,
+            placement = "bottom",
+            trigger   = "hover"
         )
     })
 }
