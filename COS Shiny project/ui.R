@@ -35,6 +35,7 @@
 library(dplyr)      # serves various formatting needs
 library(shinyBS)    # expands base Shiny features (e.g., popovers)
 library(Cairo)      # supports plot quality across devices
+library(ggplot2)    # for specifying cos theme
 
 options(shiny.usecairo=T)
 
@@ -173,6 +174,18 @@ portal_colors <<- c("#D9BB32", "#6DB33F", "#6E9CAE", "#B1662B", "#5B8067",
                     "#444D3E", "#994D3E", "#10475B", "#7D6E86", "#D47079", 
                     "#262F1D", "#B0B0B0")
 
+# define visualization theme
+cos_theme <<- theme_bw(16) +
+          theme(panel.grid.minor = element_blank(), 
+          panel.grid.major = element_blank(),
+          strip.text = element_text(color = "white"),
+          axis.text = element_text(size = 12),
+          axis.title.x = element_text(vjust = -3),
+          axis.title.y = element_text(vjust = 3),
+          plot.margin = grid::unit(c(1, 1, 1, 1), "cm"),
+          aspect.ratio = 2 / (1 + sqrt(5))
+    )
+
 ###############################################################################
 ## CONFIGURATION PROCESSING (AUTO-GENERATE ADDITIONAL USEFUL FEATURES)
 
@@ -222,7 +235,10 @@ raw_pretty_pairs <<- as.data.frame(raw_pretty_pairs)$pretty_name
 ## SHINY UI LOOP
 
 shinyUI(navbarPage(
+    # title of entire proejct
     "The Case Outcome Simulator",
+    # CSS theme for entire project (current theme from here:
+    # https://bootswatch.com/sandstone/)
     theme = "bootstrap.css",
     
     # using COS to explore trends per predictor ("Explore Mode")

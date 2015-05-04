@@ -82,6 +82,7 @@ library(nnet)       # supports interactions with the multinomial logit object
 library(MASS)       # allows for multivariate sampling
 library(simcf)      # creates counterfactual sets
 library(dplyr)      # serves various formatting needs
+library(reshape2)   # for reformatting data for visualization
 library(tidyr)      # for reformatting data for visualization
 library(ggplot2)    # for visualizing the data
 library(combinat)   # for building interaction term permutations
@@ -317,13 +318,13 @@ get_new_data <- function(exp_data,
 ###############################################################################
 ## FUNCTIONS TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
 
-format_for_visualization <- function(raw_likelihoods, 
-                                     model_object, 
-                                     base_data,
-                                     counterfactuals,
-                                     x_axis_selected = NA, 
-                                     facet_selected = NULL,
-                                     explicit_outcome_order = NA) {
+format_for_ribbon_plot <- function(raw_likelihoods, 
+                                   model_object, 
+                                   base_data,
+                                   counterfactuals,
+                                   x_axis_selected = NA, 
+                                   facet_selected = NULL,
+                                   explicit_outcome_order = NA) {
     
     # the mlogit structure is a collection of arrays but ggplot wants dataframes
     # first we extract the arrays as matrices and bind them together
@@ -393,8 +394,50 @@ format_for_visualization <- function(raw_likelihoods,
         tidy_sim$outcome <- factor(tidy_sim$outcome, explicit_outcome_order)
     }
     
+    # now we need to take our well formed data object and switch it to a long
+    # format so that it is ready for the geom_ribbon needs
+    
+    if(is.null(facet_selected)) {
+        id_columns <- c("predictor", "outcome")
+    } else {
+        id_columns <- c("predictor", "outcome", "facet")
+    }
+    
+    fl_long <- tidy_sim %>%
+        # we want to work with the lower/upper values separately, so we first 
+        # remove one half of the values (here the upper) and the unneeded pe 
+        # column
+        dplyr::select(-pe, -upper95, -upper50) %>%
+        # then we melt our data frame so that the 50/95 values are in the same
+        # column
+        melt(id.vars = id_columns, 
+             value.name = "lower_values", 
+             variable.name = "ci") %>%
+        # now we extract the 50/95 from the 50/95 levels by dropping all the 
+        # character values from the string
+        mutate(ci = as.numeric(gsub(pattern = "^[a-z]*", 
+                                    x = ci, 
+                                    replacement = ""))) %>%
+        # now we repeat for the other set of values (upper) and then join the
+        # results into a single dataframe with our lower and upper values in 
+        # their own columns
+        left_join(
+            tidy_sim %>%
+                dplyr::select(-pe, -lower95, -lower50) %>%
+                melt(id.vars = id_columns, 
+                     value.name = "upper_values", 
+                     variable.name = "ci") %>%
+                mutate(ci = as.numeric(gsub(pattern = "^[a-z]*", 
+                                            x = ci, 
+                                            replacement = ""))),
+            by = c(id_columns, "ci")) %>%
+        # and we wrap up by adding an interaction variable so that our ggplot
+        # group correctly recognizes that we want to group by both outcome and 
+        # confidence interval group (50 or 95)
+        mutate(group = interaction(ci, outcome))
+    
     # returning our visualization-ready data
-    return(tidy_sim)
+    return(fl_long)
 }
 
 get_ribbon_plot <- function(formatted_likelihoods,
@@ -403,35 +446,26 @@ get_ribbon_plot <- function(formatted_likelihoods,
                             y_lab = "Probability of Outcome",
                             custom_colors = NULL) {
     
-    # build the plot object
     plot_object <- ggplot(formatted_likelihoods, 
-                          aes(x = predictor, y = pe, 
-                              group = outcome, 
-                              ymin = lower95, ymax = upper95)) + 
-        # takes the ymin and ymax and draws a ribbon around the lines
-        geom_ribbon(alpha = 0.5, aes(fill = outcome)) + 
-        geom_ribbon(alpha = 0.5, aes(fill = outcome,
-                                     ymin = lower50, ymax = upper50)) +
-        #geom_line(aes(color = outcome)) +
+                          aes(x = predictor, group = group)) +
+        # the geoms
+        geom_ribbon(aes(fill = outcome, 
+                        ymin = lower_values, ymax = upper_values,
+                        alpha = factor(ci))) + 
+        # label adjustements
+        labs(x = x_lab, y = y_lab) +
+        # scale adjustments
+        scale_alpha_manual(values = c(0.4, 0.5), guide = FALSE) +
         scale_y_continuous(limits = c(0, 1),
                            labels = percent,
                            expand = c(0, 0)) +
         scale_x_continuous(expand = c(0, 0)) +
-        theme_bw(16) +
-        theme(panel.grid.minor = element_blank(), 
-              panel.grid.major = element_blank(),
-              strip.text = element_text(color = "white"),
-              axis.text = element_text(size = 12),
-              axis.title.x = element_text(vjust = -3),
-              axis.title.y = element_text(vjust = 3),
-              plot.margin = grid::unit(c(1, 1, 1, 1), "cm"),
-              aspect.ratio = 2 / (1 + sqrt(5))
-        ) +
-        guides(fill=guide_legend(title=NULL)) +
-        xlab(x_lab) +
-        ylab(y_lab)
+        # theme adjustments
+        cos_theme +
+        guides(fill = guide_legend(title = NULL))
+
     
-    # if custom colors are provided, adjust the color scale
+    # if custom colors are provided, adjust the color scale and update theme
     if(!is.null(custom_colors)) {
         plot_object <- plot_object + 
             scale_fill_manual(values = custom_colors) +
@@ -450,49 +484,6 @@ get_ribbon_plot <- function(formatted_likelihoods,
     return(plot_object)
 }
 
-get_error_bar_plot <- function(formatted_likelihoods,
-                               x_lab = "Outcome", 
-                               y_lab = "Probability of Outcome",
-                               custom_colors = NULL) {
-    # build the plot object
-    plot_object <- ggplot(formatted_likelihoods, 
-                          aes(x = outcome, 
-                              color = outcome,
-                              group = outcome)) + 
-        geom_errorbar(aes(ymin = lower50, ymax = upper50)) +
-        geom_errorbar(aes(ymin = lower95, ymax = upper95,
-                          width = 0.5)) +
-        scale_y_continuous(limits = c(0, 1),
-                           labels = percent) +
-        theme_bw() +
-        theme(panel.grid.minor = element_blank(), 
-              panel.grid.major = element_blank(),
-              strip.text = element_text(color = "white"),
-              axis.text = element_text(size = 12),
-              axis.title.x = element_text(vjust = -3),
-              axis.title.y = element_text(vjust = 3),
-              plot.margin = grid::unit(c(1, 1, 1, 1), "cm"),
-              aspect.ratio = 2 / (1 + sqrt(5))
-        ) +
-        theme(legend.position = "none") +
-        xlab(x_lab) +
-        ylab(y_lab) +
-        coord_flip()
-    
-    # if custom colors are provided, adjust the color scale
-    if(!is.null(custom_colors)) {
-        plot_object <- plot_object + 
-            scale_color_manual(values = custom_colors) +
-            theme(strip.background = element_rect(color = custom_colors[8], 
-                                                  fill = custom_colors[8]),
-                  panel.border = element_rect(color = custom_colors[8]),
-                  axis.ticks = element_line(color = custom_colors[8]))
-    }
-    
-    # return the plot object
-    return(plot_object)
-}
-
 get_dot_cloud_plot <- function(formatted_likelihoods,
                                x_lab = "Simulated Outcome Probability", 
                                y_lab = "",
@@ -501,28 +492,21 @@ get_dot_cloud_plot <- function(formatted_likelihoods,
     plot_object <- ggplot(formatted_likelihoods, 
                           aes(x = outcome, y = single_pe,
                               color = outcome, alpha = 0.10)) + 
+        # the geoms
         geom_jitter(position = position_jitter(width = 0.25, height = 0)) +
+        # label adjustments
+        labs(title = "The Likelihood of Each Outcome for 1000 Simulated Cases",
+             x = x_lab, y = y_lab) +
+        # scale adjustments
+        scale_x_discrete(limits = rev(levels(formatted_likelihoods$outcome))) +
         scale_y_continuous(limits = c(0, 1),
                            labels = scales::percent) +
-        theme_bw(16) +
-        theme(panel.grid.minor = element_blank(), 
-              panel.grid.major = element_blank(),
-              strip.text = element_text(color = "white"),
-              axis.text = element_text(size = 12),
-              axis.title.x = element_text(vjust = -3),
-              axis.title.y = element_text(vjust = 3),
-              plot.margin = grid::unit(c(1, 1, 1, 1), "cm"),
-              aspect.ratio = 2 / (1 + sqrt(5)),
-              plot.title = element_text(vjust=2)
-        ) +
+        # theme adjustments
+        cos_theme +
         theme(legend.position="none") +
-        ggtitle("The Likelihood of Each Outcome for 1000 Simulated Cases") +
-        xlab(x_lab) +
-        scale_x_discrete(limits = rev(levels(formatted_likelihoods$outcome))) +
-        ylab(y_lab) +
         coord_flip()
     
-    # if custom colors are provided, adjust the color scale
+    # if custom colors are provided, adjust the color scale and update theme
     if(!is.null(custom_colors)) {
         plot_object <- plot_object + 
             scale_color_manual(values = custom_colors) +

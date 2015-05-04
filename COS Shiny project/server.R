@@ -99,6 +99,12 @@ variable_configuration <<- add_slider_features(variable_configuration,
 # snag the outcome variable from the formula (simplifies later calls)
 outcome_variable <<- as.character(base_formula[[2]])
 
+# ensure the levels in the outcome variable are in RAGE order ## TEMP ##
+base_data$outcome <- factor(base_data$outcome, c("Reunification", 
+                                                 "Adoption",
+                                                 "Guardianship", 
+                                                 "Emancipation"))
+
 # expand the factors in the data object, re-add the outcome, drop the intercept
 exp_data <<- model.matrix(base_formula, base_data)
 exp_data <<- data.frame(base_data[outcome_variable],  
@@ -148,26 +154,26 @@ shinyServer(function(input, output, session) {
     
     # generate the sliders for the "Explore Mode"
     output$explore_slider_set <- renderUI({
-            make_sliders(variable_config_list = variable_configuration,
+        make_sliders(variable_config_list = variable_configuration,
                      variables_to_drop = x_axis_raw_name(),
                      append_name = "explore")
     })
     
     # generate the sliders for the "Single Case Mode"
     output$sc_slider_set <- renderUI({
-            make_sliders(variable_config_list = variable_configuration,
+        make_sliders(variable_config_list = variable_configuration,
                      variables_to_drop = NA,
                      append_name = "sc")
     })
     
     # generate representative data to feed coefficients
     base_new_data <- reactive({
-            get_new_data(exp_data,
-                         base_data,
-                         exp_model, 
-                         x_axis_raw_name(), 
-                         facet_selected = facet_raw_name(),
-                         interaction_col_names = interaction_cols)
+        get_new_data(exp_data,
+                     base_data,
+                     exp_model, 
+                     x_axis_raw_name(), 
+                     facet_selected = facet_raw_name(),
+                     interaction_col_names = interaction_cols)
     })
     
     # generate counterfactual data for the "Explore Mode" visualizations
@@ -187,13 +193,13 @@ shinyServer(function(input, output, session) {
         #          explore_new_data() and resets the sliders if they are 
         #          visible)
         if(isolate(input$slider_show)) {
-                apply_slider_values(variable_config_list = variable_configuration,
-                                    variables_to_drop = isolate(x_axis_raw_name()),
-                                    append_name = "explore",
-                                    # reactive link for when the sliders are visible
-                                    update_target = base_new_data(),
-                                    input_call = isolate(input),
-                                    interaction_col_names = interaction_cols)
+            apply_slider_values(variable_config_list = variable_configuration,
+                                variables_to_drop = isolate(x_axis_raw_name()),
+                                append_name = "explore",
+                                # reactive link for when the sliders are visible
+                                update_target = base_new_data(),
+                                input_call = isolate(input),
+                                interaction_col_names = interaction_cols)
         } else {
             # reactive link for when the sliders are hidden
             return(base_new_data())
@@ -210,12 +216,12 @@ shinyServer(function(input, output, session) {
         # NOTE: there is only a single reactive pathway here - the "update_sc_
         #       data" input must be triggered - this insures that the
         #       visualization chain is only triggered on user request        
-            apply_slider_values(variable_config_list = variable_configuration,
-                                variables_to_drop = NA,
-                                append_name = "sc",
-                                update_target = isolate(base_new_data()),
-                                input_call = isolate(input),
-                                interaction_col_names = interaction_cols)
+        apply_slider_values(variable_config_list = variable_configuration,
+                            variables_to_drop = NA,
+                            append_name = "sc",
+                            update_target = isolate(base_new_data()),
+                            input_call = isolate(input),
+                            interaction_col_names = interaction_cols)
     })
     
     # feed the representative data to the sampled coefficients to generate
@@ -227,19 +233,13 @@ shinyServer(function(input, output, session) {
                                            ci = c(0.95, 0.50))
         
         # format the summary likelihoods for visualization
-        ribbon_ready <- format_for_visualization(likelihoods_raw,
-                                                 exp_model,
-                                                 base_data,
-                                                 isolate(explore_new_data()),
-                                                 isolate(x_axis_raw_name()),
-                                                 facet_selected = isolate(facet_raw_name()),
-                                                 ## TEMP ##
-                                                 explicit_outcome_order = 
-                                                     c("Reunification",
-                                                       "Adoption",
-                                                       "Guardianship",
-                                                       "Emancipation")
-                                                 )
+        ribbon_ready <- format_for_ribbon_plot(likelihoods_raw,
+                                               exp_model,
+                                               base_data,
+                                               isolate(explore_new_data()),
+                                               isolate(x_axis_raw_name()),
+                                               facet_selected = isolate(facet_raw_name())
+        )
         
         # return the formatted object
         return(ribbon_ready)
@@ -248,19 +248,6 @@ shinyServer(function(input, output, session) {
     # single case: feed the representative data to the sampled coefficients to generate
     # our final simulated outcome likelihoods
     sc_likelihoods <- reactive({
-        # get the unformatted summary likelihoods
-        likelihoods_raw <- mlogitsimev_med(sc_new_data(), 
-                                           coeff_estimates, 
-                                           ci = c(0.95, 0.50))
-        
-        # format the summary likelihoods for visualization
-        errorbar_ready <- format_for_visualization(likelihoods_raw,
-                                                   exp_model,
-                                                   base_data,
-                                                   isolate(sc_new_data()),
-                                                   x_axis_selected = NA,
-                                                   facet_selected = NULL)
-        
         # get single point estimates for the dot plot cloud
         likelihoods_cloud <- mlogitsimev_med(sc_new_data(), 
                                              coeff_estimates, 
@@ -274,20 +261,11 @@ shinyServer(function(input, output, session) {
         dotplot_ready <- gather(likelihoods_cloud, outcome, single_pe, 
                                 -index)
         
-        # insure the outcomes are in RAGE order ## TEMP ##
-        dotplot_ready$outcome <- factor(dotplot_ready$outcome,
-                                        c("Reunification", "Adoption", 
-                                          "Guardianship", "Emancipation"))
-        
-        # gather into a single collection
-        collection <- list("eb" = errorbar_ready, 
-                           "dp" = dotplot_ready)
-        
         # return the collection
-        return(collection)
+        return(dotplot_ready)
     })
     
-    # visualize the outcome likelihoods
+    # visualize the outcome likelihoods (ribbon plot)
     output$ribbon_plot <- renderPlot({
         # isolate the x_axis_variable name and its associated transform_for_ui
         x_axis_var <- isolate(x_axis_raw_name())
@@ -307,22 +285,12 @@ shinyServer(function(input, output, session) {
         )
     })
     
-    #     output$error_bar_plot <- renderPlot({
-    #         # make sure the update button has been clicked at least once (don't
-    #         # draw until a user request has occurred)
-    #         if(input$update_sc_data > 0) {
-    #             get_error_bar_plot(sc_likelihoods()$eb,
-    #                                y_lab = "Probability",
-    #                                x_lab = "Outcomes",
-    #                                custom_colors = portal_colors)
-    #         }
-    #     })
-    
+    # visualize the outcome likelihoods (dot cloud plot)
     output$dot_cloud_plot <- renderPlot({
         # make sure the update button has been clicked at least once (don't
         # draw until a user request has occurred)
         if(input$update_sc_data > 0) {
-            get_dot_cloud_plot(sc_likelihoods()$dp,
+            get_dot_cloud_plot(sc_likelihoods(),
                                y_lab = "Simulated Outcome Probability",
                                x_lab = "",
                                custom_colors = portal_colors)
