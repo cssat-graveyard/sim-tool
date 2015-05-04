@@ -540,13 +540,17 @@ add_slider_features <- function(variable_config_object, base_data) {
         # numeric variable
         if(is.numeric(base_data[[current_var]])) {
             current_median <- median(base_data[[current_var]])
-            current_range <- range(base_data[[current_var]])
+            current_range  <- range(base_data[[current_var]])
             
             # apply the variable's transform_to_ui function (making the values
             # ui friendly)
-            current_median <- vc[[index]]$transform_for_ui(current_median)
+            current_median   <- vc[[index]]$transform_for_ui(current_median)
             current_range[1] <- vc[[index]]$transform_for_ui(current_range[1])
             current_range[2] <- vc[[index]]$transform_for_ui(current_range[2])
+            
+            # in case of reverse transformations, make sure range is ordered
+            # ascending
+            current_range <- sort(current_range)
             
             # round the range values so that ugly values are more ui friendly
             current_range[1] <- floor(current_range[1])
@@ -754,6 +758,25 @@ get_interaction_col_names <- function(base_formula, exp_data) {
     
     # return the names of interaction columns
     return(interaction_col_names)
+}
+
+# We need to summarize the key details of each ribbon plot. This builds a text
+# string (with HTML formatting) that can be used for that purpose.
+build_ribbon_summary <- function(x_axis_raw_name, variable_config_list) {
+    
+    # extract the matching config variable
+    target <- variable_config_list[[x_axis_raw_name]]
+    
+    # combine the relevant variable features to make the summary
+    ribbon_summary <- paste0(
+        "<strong>", target$pretty_name, "</strong><br>",
+        target$definition, "<br><br>",
+        "<strong>Key Trends</strong><br>",
+        target$ribbon_plot_summary
+    )
+    
+    # return the text string
+    return(ribbon_summary)
 }
 
 ###############################################################################

@@ -67,18 +67,26 @@ options(shiny.usecairo=T)
 # )
 variable_configuration <<- list(   
     mist_scores = list(
-        pretty_name         = "Engagement: Mistrust",
-        definition          = "Parental belief that the agency or worker is manipulative, malicious, or capricious, with intent to harm the client.",
+        pretty_name         = "Engagement: Trust",
+        definition          = paste0("Parental belief that the agency or ", 
+                                     "worker is sincere, honest, or ",
+                                     "well-intentioned, with intent to help ",
+                                     "the client."),
+        ribbon_plot_summary = paste0("TEST"),
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
         facet_candidate     = FALSE,
-        transform_for_ui    = function(x) x + 3,
-        transform_for_model = function(x) x - 3
+        transform_for_ui    = function(x) abs(x - 3),
+        transform_for_model = function(x) -(x) + 3
     ),    
     wrkg_scores = list(
         pretty_name         = "Engagement: Working Relationship",
-        definition          = "Parental perception of the interpersonal relationship with worker characterized by a sense of reciprocity or mutuality and good communication.",
+        definition          = paste0("Parental perception of the ",
+                                     "interpersonal relationship with worker ",
+                                     "characterized by a sense of reciprocity ",
+                                     "or mutuality and good communication."),
+        ribbon_plot_summary = paste0("TEST"),
         x_axis_candidate    = TRUE,    
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -88,7 +96,12 @@ variable_configuration <<- list(
     ),   
     recep_scores = list(
         pretty_name         = "Engagement: Receptivity",
-        definition          = "Parental openness to receiving help, characterized by recognition of problems or circumstances that resulted in agency intervention and by a perceived need for help",
+        definition          = paste0("Parental openness to receiving help, ",
+                                     "characterized by recognition of ", 
+                                     "problems or circumstances that resulted ",
+                                     "in agency intervention and by a ",
+                                     "perceived need for help."),
+        ribbon_plot_summary = paste0("TEST"),
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -98,7 +111,17 @@ variable_configuration <<- list(
     ),    
     buyn_scores = list(
         pretty_name         = "Engagement: Buy-In",
-        definition          = "Parental perception of benefit; a sense of being helped or the expectation of receiving help through the agency involvement; a feeling that things are changing (or will change) for the better. Also includes a commitment to the helping process, characterized by active participation in planning or services, goal ownership, and initiative in seeking and using help.",
+        definition          = paste0("Parental perception of benefit; a sense ",
+                                     "of being helped or the expectation of ",
+                                     "receiving help through the agency ",
+                                     "involvement; a feeling that things are ",
+                                     "changing (or will change) for the ",
+                                     "better. Also includes a commitment to ",
+                                     "the helping process, characterized by ",
+                                     "active participation in planning or ",
+                                     "services, goal ownership, and ",
+                                     "initiative in seeking and using help."),
+        ribbon_plot_summary = paste0("TEST"),
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -108,7 +131,10 @@ variable_configuration <<- list(
     ),    
     log_age_eps_begin = list(
         pretty_name         = "Age at Episode Begin",
-        definition          = "The age of the child (in years) as of the start of their placement in out-of-home care.",
+        definition          = paste0("The age of the child (in years) as of ",
+                                     "the start of their placement in ",
+                                     "out-of-home care."),
+        ribbon_plot_summary = paste0("TEST"),
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -118,7 +144,11 @@ variable_configuration <<- list(
     ),  
     housing_hs_cnt = list(
         pretty_name         = "Count of Housing Hardships",
-        definition          = "The count of affirmative responses to survey questions concerning housing hardships (e.g. difficulty paying rent, couch-surfing, etc.).",
+        definition          = paste0("The count of affirmative responses to ",
+                                     "survey questions concerning housing ",
+                                     "hardships (e.g. difficulty paying rent, ",
+                                     "couch-surfing, etc.)."),
+        ribbon_plot_summary = paste0("TEST"),
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -128,7 +158,9 @@ variable_configuration <<- list(
     ),   
     REG = list(
         pretty_name         = "Administrative Region",
-        definition          = "An indicator of the administrative region of the child welfare case.",
+        definition          = paste0("An indicator of the administrative ",
+                                     "region of the child welfare case."),
+        ribbon_plot_summary = paste0("TEST"),
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -138,7 +170,10 @@ variable_configuration <<- list(
     ),
     employ = list(
         pretty_name         = "Parental Employment Status",
-        definition          = "An indicator as to whether or not the parent reported full or part-time employment.",
+        definition          = paste0("An indicator as to whether or not the ",
+                                     "parent reported full or part-time ",
+                                     "employment."),
+        ribbon_plot_summary = paste0("TEST"),
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -148,7 +183,10 @@ variable_configuration <<- list(
     ),
     sm_coll = list(
         pretty_name         = "Parental Education Level",
-        definition          = "An indicator as to whether or not the parent reported any education beyond high-school.",
+        definition          = paste0("An indicator as to whether or not the ",
+                                     "parent reported any education beyond ",
+                                     "high-school."),
+        ribbon_plot_summary = paste0("TEST"),
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -158,7 +196,10 @@ variable_configuration <<- list(
     ),
     high_in = list(
         pretty_name         = "Parental Income Status",
-        definition          = "An indicator as to whether or not the reported parental income is less than (or equal to) 10,000 dollars.",
+        definition          = paste0("An indicator as to whether or not the ",
+                                     "reported parental income is less than ",
+                                     "(or equal to) 10,000 dollars."),
+        ribbon_plot_summary = paste0("TEST"),
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -176,7 +217,7 @@ portal_colors <<- c("#D9BB32", "#6DB33F", "#6E9CAE", "#B1662B", "#5B8067",
 
 # define visualization theme
 cos_theme <<- theme_bw(16) +
-          theme(panel.grid.minor = element_blank(), 
+    theme(panel.grid.minor = element_blank(), 
           panel.grid.major = element_blank(),
           strip.text = element_text(color = "white"),
           axis.text = element_text(size = 12),
@@ -251,7 +292,7 @@ shinyUI(navbarPage(
                                 choices = fixed_ui_options$x_axis_options),
                    
                    bsPopover("x_axis_choice",
-                             title = "Variable Definitions.",
+                             title = "Variable Definitions",
                              content = paste(
                                  "<strong>",
                                  fixed_ui_options$x_axis_options,
@@ -259,7 +300,7 @@ shinyUI(navbarPage(
                                  "<br>",
                                  fixed_ui_options$x_axis_definitions,
                                  "<br><br>"),
-                             trigger = "click",
+                             trigger = "hover",
                              placement = "right",
                              options = list(container = "body")),
                    
@@ -269,7 +310,7 @@ shinyUI(navbarPage(
                                             fixed_ui_options$facet_options)),
                    
                    bsPopover("facet_choice", 
-                             title = "Variable Definitions.",
+                             title = "Variable Definitions",
                              content = paste(
                                  "<strong>",
                                  fixed_ui_options$facet_options,
@@ -277,7 +318,7 @@ shinyUI(navbarPage(
                                  "<br>",
                                  fixed_ui_options$facet_definitions,
                                  "<br><br>"),
-                             trigger = "click",
+                             trigger = "hover",
                              placement = "right",
                              options = list(container = "body"))
                    
@@ -287,7 +328,7 @@ shinyUI(navbarPage(
                    popify(helpText(h4("Advanced Options")), 
                           title = "What is This?",
                           content = "This section allows you to explore how changes in unselected predictors impact the relationship between the selected x-axis predictor and simulated outcome likelihoods.",
-                          trigger = "click",
+                          trigger = "hover",
                           placement = "bottom"
                    ),
                    
@@ -315,10 +356,8 @@ shinyUI(navbarPage(
                plotOutput("ribbon_plot"),
                
                wellPanel(
-                   strong("What does this graph show us?"),
-                   p("This graph shows the relationship between a selected ",
-                     "predictor (X-Axis choice) and the simulated likelihood ",
-                     "of RAGE outcomes at different levels of that predictor."),
+                   uiOutput("ribbon_text"),
+                   br(),
                    p("The simulation is modeled on real data collected from ",
                      "a limited selection of Washington State welfare data.")
                )

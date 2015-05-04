@@ -55,6 +55,12 @@ load("data_model_V4.RData")
 # NOTE: incomplete cases will be dropped to avoid modeling/plotting issues
 base_data <<- data[which(complete.cases(data)), ]
 
+# ensure the levels in the outcome variable are in RAGE order
+base_data$outcome <- factor(base_data$outcome, c("Reunification", 
+                                                 "Adoption",
+                                                 "Guardianship", 
+                                                 "Emancipation"))
+
 # specify the formula for the base data object
 base_formula <<- outcome ~ 
     # additive terms
@@ -98,12 +104,6 @@ variable_configuration <<- add_slider_features(variable_configuration,
 
 # snag the outcome variable from the formula (simplifies later calls)
 outcome_variable <<- as.character(base_formula[[2]])
-
-# ensure the levels in the outcome variable are in RAGE order ## TEMP ##
-base_data$outcome <- factor(base_data$outcome, c("Reunification", 
-                                                 "Adoption",
-                                                 "Guardianship", 
-                                                 "Emancipation"))
 
 # expand the factors in the data object, re-add the outcome, drop the intercept
 exp_data <<- model.matrix(base_formula, base_data)
@@ -285,16 +285,19 @@ shinyServer(function(input, output, session) {
         )
     })
     
+    # construct the summary text for constructed ribbon plot
+    output$ribbon_text <- renderText({
+        build_ribbon_summary(x_axis_raw_name(), variable_configuration)
+    })
+    
     # visualize the outcome likelihoods (dot cloud plot)
     output$dot_cloud_plot <- renderPlot({
-        # make sure the update button has been clicked at least once (don't
-        # draw until a user request has occurred)
-        if(input$update_sc_data > 0) {
-            get_dot_cloud_plot(sc_likelihoods(),
-                               y_lab = "Simulated Outcome Probability",
-                               x_lab = "",
-                               custom_colors = portal_colors)
-        }
+        # draw the plot
+        get_dot_cloud_plot(sc_likelihoods(),
+                           y_lab = "Simulated Outcome Probability",
+                           x_lab = "",
+                           custom_colors = portal_colors)
+        
     })
 })
 
