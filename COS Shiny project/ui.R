@@ -356,51 +356,41 @@ shinyUI(navbarPage(
                    radioButtons("x_axis_choice", label = h4("Select X-Axis"), 
                                 choices = fixed_ui_options$x_axis_options),
                    
-                   bsPopover("x_axis_choice",
-                             title = "Variable Definitions",
-                             content = paste(
-                                 "<strong>",
-                                 fixed_ui_options$x_axis_options,
-                                 "</strong>",
-                                 "<br>",
-                                 fixed_ui_options$x_axis_definitions,
-                                 "<br><br>"),
-                             trigger = "hover",
-                             placement = "right",
-                             options = list(container = "body")),
+#                    bsPopover("x_axis_choice",
+#                              title = "Variable Definitions",
+#                              content = paste(
+#                                  "<strong>",
+#                                  fixed_ui_options$x_axis_options,
+#                                  "</strong>",
+#                                  "<br>",
+#                                  fixed_ui_options$x_axis_definitions,
+#                                  "<br><br>"),
+#                              trigger = "hover",
+#                              placement = "right",
+#                              options = list(container = "body")),
                    
                    radioButtons("facet_choice", 
                                 label = h4("Compare By..."),
                                 choices = c("None", 
-                                            fixed_ui_options$facet_options)),
+                                            fixed_ui_options$facet_options))
                    
-                   bsPopover("facet_choice", 
-                             title = "Variable Definitions",
-                             content = paste(
-                                 "<strong>",
-                                 fixed_ui_options$facet_options,
-                                 "</strong>",
-                                 "<br>",
-                                 fixed_ui_options$facet_definitions,
-                                 "<br><br>"),
-                             trigger = "hover",
-                             placement = "right",
-                             options = list(container = "body"))
+#                    bsPopover("facet_choice", 
+#                              title = "Variable Definitions",
+#                              content = paste(
+#                                  "<strong>",
+#                                  fixed_ui_options$facet_options,
+#                                  "</strong>",
+#                                  "<br>",
+#                                  fixed_ui_options$facet_definitions,
+#                                  "<br><br>"),
+#                              trigger = "hover",
+#                              placement = "right",
+#                              options = list(container = "body"))
                    
                ),
                
                wellPanel( 
-                   popify(helpText(h4("Advanced Options")), 
-                          title = "What is This?",
-                          content = paste0("This section allows you to ",
-                                           "explore how changes in unselected ",
-                                           "predictors impact the ",
-                                           "relationship between the selected ",
-                                           "x-axis predictor and simulated ",
-                                           "outcome likelihoods."),
-                          trigger = "hover",
-                          placement = "bottom"
-                   ),
+                   helpText(h4("Advanced Options")), 
                    
                    checkboxInput("slider_show", 
                                  label = "Show?",
