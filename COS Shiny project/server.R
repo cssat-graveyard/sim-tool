@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 4/29/2015
+# Date updated: 5/5/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -245,8 +245,8 @@ shinyServer(function(input, output, session) {
         return(ribbon_ready)
     })
     
-    # single case: feed the representative data to the sampled coefficients to generate
-    # our final simulated outcome likelihoods
+    # single case: feed the representative data to the sampled coefficients to 
+    # generate our final simulated outcome likelihoods
     sc_likelihoods <- reactive({
         # get single point estimates for the dot plot cloud
         likelihoods_cloud <- mlogitsimev_med(sc_new_data(), 

@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/25/2015
-# Date updated: 4/29/2015
+# Date updated: 5/5/2015
 
 # NOTE: Functions were largely developed in the "gator model example V3.R"
 #       script. That script was archived to allow us to seperate the model
@@ -113,8 +113,8 @@ get_point_estimates <- function(model_object) {
     number_coefficients <- length(model_object$coefnames)
     number_outcomes <- length(model_object$lab)
     
-    # the multinom function returns a lot of 0s - first we find identify where the
-    # non-reference weights begin (one set of weights per outcome but we 
+    # the multinom function returns a lot of 0s - first we find identify where 
+    # the non-reference weights begin (one set of weights per outcome but we 
     # skip the initial reference set)
     index_starts <- NULL
     for(i in 1:(number_outcomes - 1)) {
@@ -204,8 +204,8 @@ get_new_data <- function(exp_data,
         # get all combinations of the factor name combined with the level name  
         # (in the order that the levels are set)
         factor_var_combinations <- paste0(facet_selected, var_levels)
-        # expand the counterfactual set to include appropriate combinations of the
-        # factor/level columns - all having range(0, 1, 1)
+        # expand the counterfactual set to include appropriate combinations of 
+        # the factor/level columns - all having range(0, 1, 1)
         # first treat the initial counterfactual set explicitly as the x_axis
         # cuts
         x_axis_cuts <- counterfactuals
@@ -678,11 +678,13 @@ apply_slider_values <- function(variable_config_list,
             if(any(interaction_index)) {
                 # if we find interactions, we pull those column names out
                 interaction_vars <- interaction_col_names[interaction_index]
-                # create a list with the items in each term split (looks crazy but
-                # I'm simply replacing the first period with a unique phrase so that
-                # we only split once)
-                interaction_list <- sub(".", "---", interaction_vars, fixed = TRUE)
-                interaction_list <- strsplit(interaction_list, "---", fixed = T)
+                # create a list with the items in each term split (looks crazy 
+                # but I'm simply replacing the first period with a unique phrase 
+                # so that we only split once)
+                interaction_list <- sub(".", "---", interaction_vars, 
+                                        fixed = TRUE)
+                interaction_list <- strsplit(interaction_list, "---", 
+                                             fixed = TRUE)
                 # update the interaction variables by multiplying their
                 # source columns together
                 for(current_set in 1:length(interaction_list)) {
@@ -705,16 +707,16 @@ apply_slider_values <- function(variable_config_list,
 # interactions and identifies columns that have matches - which will be the
 # interaction columns.
 get_interaction_col_names <- function(base_formula, exp_data) {
-    # convert the base formula into a single character string (ignoring the outcome
-    # variable)
+    # convert the base formula into a single character string (ignoring the 
+    # outcome variable)
     formula_string <- as.character(base_formula)[[3]]
     
-    # parse all the separate terms (not variables but rather anything that occurs
-    # before or after a "+" symbol)
+    # parse all the separate terms (not variables but rather anything that
+    # occurs before or after a "+" symbol)
     formula_parsed <- strsplit(formula_string, "+", fixed = TRUE)
     
-    # get rid of any spaces (note that strsplit returns a list - we unlist to make
-    # sure we work with a character vector)
+    # get rid of any spaces (note that strsplit returns a list - we unlist to 
+    # make sure we work with a character vector)
     formula_parsed <- gsub(" ", "", unlist(formula_parsed))
     
     # now we collect just those terms that have an interaction symbol "*"
@@ -732,9 +734,10 @@ get_interaction_col_names <- function(base_formula, exp_data) {
     # for each term, we extract the variable names
     interaction_terms <- strsplit(interaction_terms, "*", fixed = TRUE)
     
-    # for each term, we need to construct all possible combinations of the variable
-    # names (variable names separated by a ".") - these are what we will use to
-    # identity the interaction data columns in the expanded data frame
+    # for each term, we need to construct all possible combinations of the 
+    # variable names (variable names separated by a ".") - these are what we 
+    # will use to identity the interaction data columns in the expanded data 
+    # frame
     # 1. get the permutations of the variable name strings
     interaction_combos <- lapply(interaction_terms, permn)
     # 2. collapse into single strings separated by a "."
