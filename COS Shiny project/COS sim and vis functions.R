@@ -279,14 +279,24 @@ get_new_data <- function(exp_data,
     
     # now we check if we have interaction columns in our predictors
     if(!is.na(interaction_col_names)) {
+        # snag our column names and split terms
+        column_names <- interaction_col_names$column_name
+        split_terms <- interaction_col_names$split_term
         # if we find them, we pull those terms out
-        interaction_index <- predictor_names %in% interaction_col_names
-        interaction_vars <- predictor_names[interaction_index]
-        # create a list with the items in each term split (looks crazy but
-        # I'm simply replacing the first period with a unique phrase so that
-        # we only split once)
-        interaction_list <- sub(".", "---", interaction_vars, fixed = TRUE)
-        interaction_list <- strsplit(interaction_list, "---", fixed = T)
+        interaction_index <- column_names %in% predictor_names
+        interaction_vars <- column_names[interaction_index]
+        # drop any split terms if needed
+        split_terms <- split_terms[interaction_index]
+        # create a list with the items in each term split based on our split
+        # terms
+        interaction_list <- list()
+        for(index in 1:length(interaction_vars)) {
+            current_split <- strsplit(interaction_vars[index], 
+                                  split_terms[index], 
+                                  perl = TRUE)
+            
+            interaction_list[[index]] <- current_split
+        }
         # we quickly capture the current number of columns in our 
         # countefactual table and add one to it (giving us the index
         # for where we are adding new columns)
@@ -295,7 +305,8 @@ get_new_data <- function(exp_data,
         # counterfactual table and multiply them together to create a new
         # column for the interaction term
         for(current_set in 1:length(interaction_list)) {
-            matching_cols <- counterfactuals[interaction_list[[current_set]]]
+            matching_names <- unlist(interaction_list[[current_set]])
+            matching_cols <- counterfactuals[matching_names]
             new_col <- apply(matching_cols, 1, prod)
             counterfactuals <- cbind(counterfactuals, new_col)
         }
@@ -444,14 +455,16 @@ get_ribbon_plot <- function(formatted_likelihoods,
                             facet_selected = NULL,
                             x_lab = "Predictor", 
                             y_lab = "Probability of Outcome",
-                            custom_colors = NULL) {
+                            custom_colors = NULL,
+                            annotation = FALSE,
+                            annotation1 = NULL) {
     
     plot_object <- ggplot(formatted_likelihoods, 
                           aes(x = predictor, group = group)) +
         # the geoms
         geom_ribbon(aes(fill = outcome, 
                         ymin = lower_values, ymax = upper_values,
-                        alpha = factor(ci))) + 
+                        alpha = factor(ci))) +
         # label adjustements
         labs(x = x_lab, y = y_lab) +
         # scale adjustments
@@ -463,7 +476,24 @@ get_ribbon_plot <- function(formatted_likelihoods,
         # theme adjustments
         cos_theme +
         guides(fill = guide_legend(title = NULL))
-
+    
+    # if x-axis annotations are provided, add these to an appropriate place
+    # inside the plot
+    if(!is.null(annotation)) {
+        plot_object <- plot_object + 
+            annotate(geom = "text", 
+                     label = annotation,
+                     x = c(1.5, 4.5),
+                     y = 0.025,
+                     size = 4,
+                     color = "#444040")
+    }
+    
+    if(!is.null(annotation1)) {
+        plot_object <- plot_object +
+            scale_x_continuous(expand = c(0, 0), 
+                               labels = annotation1)
+    }
     
     # if custom colors are provided, adjust the color scale and update theme
     if(!is.null(custom_colors)) {
@@ -477,7 +507,8 @@ get_ribbon_plot <- function(formatted_likelihoods,
     
     # if a facet variable is set, add the facet layer to the plot object
     if(!is.null(facet_selected)) {
-        plot_object <- plot_object + facet_wrap(~ facet, ncol = 2)
+        plot_object <- plot_object + 
+            facet_wrap(~ facet, ncol = 2)
     }
     
     # return the plot object
@@ -526,7 +557,7 @@ get_dot_cloud_plot <- function(formatted_likelihoods,
 # This function expands the variable configuration object to include some more
 # features, specifically those needed to define the sliders. It calculates
 # these from the base data object.
-add_slider_features <- function(variable_config_object, base_data) {
+add_input_features <- function(variable_config_object, base_data) {
     # loop over the variables specified the variable configuration object
     for(index in 1:length(variable_config_object)) {
         # adjust object name to be more manageable
@@ -536,7 +567,7 @@ add_slider_features <- function(variable_config_object, base_data) {
         current_var <- names(vc)[[index]]
         
         # if it's numeric, calculate the relevant values, otherwise assign NA
-        # to the values to the properties exist but are appropriate for a non-
+        # to the values so the properties exist but are appropriate for a non-
         # numeric variable
         if(is.numeric(base_data[[current_var]])) {
             current_median <- median(base_data[[current_var]])
@@ -560,10 +591,18 @@ add_slider_features <- function(variable_config_object, base_data) {
             current_range <- NA
         }
         
+        # if median/range are NA, grab the variable levels, otherwise set to NA
+        if(is.na(current_median)) {
+            current_levels <- levels(base_data[[current_var]])
+        } else {
+            current_levels <- NA
+        }
+        
         # add the values to the variable configuration
         variable_config_object[[current_var]]$ui_median <- current_median
         variable_config_object[[current_var]]$ui_min <- current_range[1]
         variable_config_object[[current_var]]$ui_max <- current_range[2]
+        variable_config_object[[current_var]]$ui_levels <- current_levels
     }
     
     # return the update variable_config_object
@@ -575,15 +614,17 @@ add_slider_features <- function(variable_config_object, base_data) {
 # will also accept a vector of raw variable names that overrides the variable 
 # configuration file to exclude selected variables. A unique "append" name must
 # also be provided to ensure that separate slider sets to not share name space.
-make_sliders <- function(variable_config_list, 
-                         variables_to_drop = NA,
-                         append_name) {
+make_inputs <- function(variable_config_list, 
+                        variables_to_drop = NA,
+                        append_name,
+                        facet_as_dropdown = FALSE) {
     # index which variables are slider candidates
     slider_index <- unlist(lapply(variable_config_list, 
                                   function(x) x$slider_candidate == TRUE))
     
     # if a vector of variables to drop has been provided, adjust their indices 
-    # to FALSE so sliders are not made for them
+    # to FALSE so sliders are not made for them (this is primarily useful for
+    # dropping the x-axis variable where needed)
     if(!is.na(variables_to_drop)) {
         for(index in 1:length(variables_to_drop)) {
             slider_index[variables_to_drop[index]] <- FALSE
@@ -595,7 +636,7 @@ make_sliders <- function(variable_config_list,
     selected_sliders <- variable_config_list[slider_index]
     
     # generate the sliders (and their popovers)
-    lapply(1:length(selected_sliders), function(i) {
+    slider_set <- lapply(1:length(selected_sliders), function(i) {
         popify(
             sliderInput(
                 inputId = paste0(append_name,
@@ -614,7 +655,51 @@ make_sliders <- function(variable_config_list,
             placement = "bottom",
             trigger   = "hover"
         )
+        
     })
+    
+    # if facets are desired, we'll make drop-downs for each of those as well
+    # (only really appropriate for Single Case mode)
+    if(facet_as_dropdown) {
+        # index which variables are facet candidates
+        facet_index <- unlist(lapply(variable_config_list, 
+                                     function(x) x$facet_candidate == TRUE))
+        
+        # if a vector of variables to drop has been provided, adjust their  
+        # indices to FALSE so facets are not made for them
+        if(!is.na(variables_to_drop)) {
+            for(index in 1:length(variables_to_drop)) {
+                facet_index[variables_to_drop[index]] <- FALSE
+            }
+        }
+        
+        # subset variable_config_list to just get the facet candidates
+        selected_dropdowns <- variable_config_list[facet_index]
+        
+        # generate the dropdowns (and their popovers)
+        dropdown_set <- lapply(1:length(selected_dropdowns), function(i) {
+            popify(
+                selectInput(
+                    inputId = paste0(append_name,
+                                     "_",
+                                     names(selected_dropdowns)[i]), 
+                    label   = selected_dropdowns[[i]]$pretty_name,
+                    choices = selected_dropdowns[[i]]$ui_levels),
+                
+                title     = selected_dropdowns[[i]]$pretty_name,
+                content   = selected_dropdowns[[i]]$definition,
+                placement = "right",
+                trigger   = "hover",
+                options = list(container = "body")
+            )
+        })
+    }
+    
+    if(exists("dropdown_set")) {
+        return(c(slider_set, dropdown_set))
+    } else {
+        return(slider_set)   
+    }
 }
 
 # This function updates the base data object to create a data object adjusted
@@ -622,78 +707,142 @@ make_sliders <- function(variable_config_list,
 # inputs used to make the slider set with the addition of specifying the 
 # target object. To establish the reactive link, we also need to explicitly
 # pass the input object.
-apply_slider_values <- function(variable_config_list,
-                                variables_to_drop = NA,
-                                append_name,
-                                update_target,
-                                input_call,
-                                interaction_col_names) {
-    # index which variables are slider candidates
-    slider_index <- unlist(lapply(variable_config_list, 
-                                  function(x) x$slider_candidate == TRUE))
+apply_input_values <- function(update_target,
+                               interaction_col_names,
+                               variable_config_list,
+                               input_call,
+                               append_name,
+                               base_data,
+                               use_slider_values = TRUE,
+                               use_dropdown_values = FALSE,
+                               variables_to_drop = NA
+) {
+    # index which variables are input candidates - the way we build this index
+    # will depend on which input source(s) we want to apply
+    if(use_slider_values == TRUE & use_dropdown_values == FALSE) {
+        input_index <- unlist(lapply(variable_config_list, 
+                                     function(x) x$slider_candidate == TRUE))
+    } else if(use_slider_values == TRUE & use_dropdown_values == TRUE) {
+        input_index <- unlist(lapply(variable_config_list, 
+                                     function(x) x$slider_candidate == TRUE ||
+                                                   x$facet_candidate == TRUE))
+    } else {
+        input_index <- unlist(lapply(variable_config_list, 
+                                     function(x) x$facet_candidate == TRUE))
+    }
     
     # if a vector of variables to drop has been provided, adjust their indices 
-    # to FALSE so sliders are not made for them
+    # to FALSE so sliders are not made for them (this is primary use for this
+    # is dropping the x-axis variable when needed)
     if(!is.na(variables_to_drop)) {
         for(index in 1:length(variables_to_drop)) {
-            slider_index[variables_to_drop[index]] <- FALSE
+            input_index[variables_to_drop[index]] <- FALSE
         }
     }
     
-    # subset variable_config_list to just get the slider candidates
-    # (excluding the x-axis variabe)
-    selected_sliders <- variable_config_list[slider_index]
+    # subset variable_config_list to just get the input candidates
+    selected_inputs <- variable_config_list[input_index]
     
     # update the values based on current slider inputs
-    for(i in 1:length(selected_sliders)) {
+    for(i in 1:length(selected_inputs)) {
         # grab the key details
-        current_var <- names(selected_sliders)[[i]]
-        slider_name <- paste0(append_name, "_", current_var)
-        slider_value <- isolate(input_call[[slider_name]])
+        current_var <- names(selected_inputs)[[i]]
+        input_name <- paste0(append_name, "_", current_var)
+        input_value <- isolate(input_call[[input_name]])
+        input_type <- ifelse(selected_inputs[[i]]$slider_candidate,
+                             "slider",
+                             "dropdown")
+        input_trans <- selected_inputs[[current_var]]$transform_for_model 
         
         # all the input variables initialize as "NULL" - we want to avoid
-        # working with them until they've been assigned a value
-        # NOTE: input[[current_var]] IS a reactive link (actually a flexible 
-        #       set of reactive links) - it links to the sliders dynamically 
-        #       generated by the output$slider_set observer
-        if(!is.null(isolate(input_call[[slider_name]]))) {
-            # apply the relevant transformation to convert slider values
-            # to model-appropriate values
-            model_value <- selected_sliders[[current_var]]$transform_for_model(slider_value)
-            
+        # working with them until they've been assigned a value so we simply
+        # return the update_target in that case
+        # NOTE: input_call[[current_var]] IS a reactive link (actually a  
+        #       flexible set of reactive links) - it links to the inputs 
+        #       dynamically generated by the output$APPEND_input_set observers
+        if(is.null(isolate(input_call[[input_name]]))) {
+            return(update_target)
+        }
+        
+        # apply the relevant transformation to convert slider values
+        # to model-appropriate values
+        model_value <- input_trans(input_value)
+        
+        # at this point, we apply the input value differently if the value came
+        # from a slider or a dropdown;
+        # the expanded dataset includes a single column for each slider
+        # variable + appropriate interaction columns
+        # in contrast, the dataset includes a column for each dropdown level 
+        # except the reference level (the first factor level however the levels 
+        # were ordered in base_data) + appropriate interaction columns for EACH
+        # non-reference levels
+        if(input_type == "slider") {
             # update the matching update_target column with the 
             # current slider value
             update_target[current_var] <- model_value
+        } else if (input_type == "dropdown") {
+            # we are going to have to update ALL of the non-interaction
+            # columns associated with this factor - we want all the non-
+            # selected levels to be set to "0" (not true) and the selected
+            # level to be set to "1" (true)
             
-            # now we check if there any interactions...
-            if(!is.na(interaction_col_names)) {
-                interaction_index <- grepl(paste(paste0(".", current_var), 
-                                                 paste0(current_var, "."), 
-                                                 sep = "|"),
-                                           interaction_col_names)
-            } else {
-                interaction_index <- FALSE
+            # we snag the variable levels from the base data
+            var_levels <- levels(base_data[[current_var]])
+            # we replace any non-alphanumeric values with "." to match the 
+            # subsitution that occurs during the expansion from base_data to 
+            # exp_data
+            var_levels <- gsub("[^[:alnum:]]", ".", var_levels)
+            # we create the non-interaction column names by combining the
+            # raw variable name with the level names
+            single_col_names <- paste(current_var, var_levels, sep = "")
+            # we drop the reference level
+            single_col_names <- single_col_names[-1]
+            
+            # we define the column that matches our selected factor level
+            matching_col <- paste(current_var,
+                                  gsub("[^[:alnum:]]", ".", input_value),
+                                  sep = "")
+            
+            # we initially set all remaining the columns to "0"
+            for(current_col in single_col_names) {
+                update_target[current_col] <- 0
             }
-            # if there are any interactions...
-            if(any(interaction_index)) {
-                # if we find interactions, we pull those column names out
-                interaction_vars <- interaction_col_names[interaction_index]
-                # create a list with the items in each term split (looks crazy 
-                # but I'm simply replacing the first period with a unique phrase 
-                # so that we only split once)
-                interaction_list <- sub(".", "---", interaction_vars, 
-                                        fixed = TRUE)
-                interaction_list <- strsplit(interaction_list, "---", 
-                                             fixed = TRUE)
-                # update the interaction variables by multiplying their
-                # source columns together
-                for(current_set in 1:length(interaction_list)) {
-                    matching_cols <- update_target[interaction_list[[current_set]]]
-                    updated_col <- apply(matching_cols, 1, prod)
-                    update_target[interaction_vars[[current_set]]] <- updated_col
-                }
+
+            # finally, we verify that our matching column is present in the
+            # expanded data set - if it is, we update it; if it isn't, it's the
+            # reference level and we stop since we have set all non-reference
+            # levels to "0"
+            if(any(grepl(matching_col, names(update_target), fixed = TRUE))) {
+                update_target[matching_col] <- 1
             }
         }
+    }
+    
+    # now we quickly refresh all of the interaction columns (just doing this by
+    # default is, on average, faster than testing if each input is related to
+    # an interaction; it is also technically much easier to implement; this
+    # claim may not hold if there are a large number of interactions)
+    
+    # create a list of the interaction column names split in half (by their
+    # matching split term)
+    column_names <- interaction_col_names$column_name
+    split_terms <- interaction_col_names$split_term
+    interaction_list <- list()
+    for(index in 1:length(column_names)) {
+        current_split <- strsplit(column_names[index], 
+                                  split_terms[index], 
+                                  perl = TRUE)
+        
+        interaction_list[[index]] <- current_split
+    }
+    
+    # update the interaction variables by multiplying their
+    # source columns together
+    for(current_set in 1:length(interaction_list)) {
+        matching_names <- unlist(interaction_list[[current_set]])
+        matching_cols <- update_target[matching_names]
+        updated_col <- apply(matching_cols, 1, prod)
+        update_target[column_names[[current_set]]] <- updated_col
     }
     
     return(update_target)
@@ -735,32 +884,100 @@ get_interaction_col_names <- function(base_formula, exp_data) {
     interaction_terms <- strsplit(interaction_terms, "*", fixed = TRUE)
     
     # for each term, we need to construct all possible combinations of the 
-    # variable names (variable names separated by a ".") - these are what we 
+    # variable names (variable names separated by a "." and - for factor-factor
+    # interactions - possibly some other "." and text) - these are what we 
     # will use to identity the interaction data columns in the expanded data 
     # frame
     # 1. get the permutations of the variable name strings
     interaction_combos <- lapply(interaction_terms, permn)
-    # 2. collapse into single strings separated by a "."
-    interaction_combos <- lapply(interaction_combos, 
-                                 function(x) lapply(x, paste0, collapse = "."))
-    # 3. switch the ugly list to a clean character vector
-    interaction_combos <- unlist(interaction_combos)
+    # 2. build the regex search strings to test if there are column matches 
+    #    for each permutation (first term will always start the column name,
+    #    second term will always occur somewhere in the string immediately
+    #    after a period)
+    reg_set <- c()
+
+    for(combo_index in 1:length(interaction_combos)) {
+        current_combo <- interaction_combos[[combo_index]]
+        reg_combo <- list()
+        
+        for(subset_index in 1:length(current_combo)) {
+            current_subset <- current_combo[[subset_index]]
+            
+            # first pattern
+            first_pattern <- c(paste0("^", current_subset[[1]]))
+            
+            # second pattern (note that we only need to make up to the two-
+            # way match - all three-way+ matches will be matched by a two-way;
+            # also note that we match the PERIOD that occurs before the 
+            # variable name - this let's us re-use this term to split
+            # the name later on)
+            second_pattern <- paste0("\\.(?=", 
+                                     current_subset[[2]], 
+                                     "[a-zA-Z])|",
+                                     "\\.(?=", current_subset[[2]], "$)")
+            
+            reg_combo[[subset_index]] <- c(first_pattern, second_pattern)
+        }
+        
+        reg_set[[combo_index]] <- reg_combo
+    }
+      
+    # 3. test the regex pairs against the exp_data names to see which columns
+    #    are interaction columns
+    interaction_test_collection <- lapply(reg_set, function(x) {
+        pair_collection <- list()
+        for(index in 1:length(x)) {
+            current_pair <- x[[index]]
+            pair_collection[[index]] <- grepl(current_pair[[1]], 
+                                              names(exp_data),
+                                              perl = TRUE) & 
+                                        grepl(current_pair[[2]], 
+                                              names(exp_data),
+                                              perl = TRUE)
+        }
+        
+        return(pair_collection)
+    })
     
-    # test the expanded data object names against the vector to determine which
-    # columns have combinations of the variable names separated by a "." (thus
-    # indicating an interaction column)
-    # 1. test each permutation against the column names
-    interaction_index <- lapply(interaction_combos, 
-                                function(x) grepl(x, names(exp_data)))
-    # 2. collapse the results - if a column name matches ANY permutation it is
-    #    any interaction column
-    interaction_index <- do.call(rbind, interaction_index)
-    interaction_index <- apply(interaction_index, 2, any)
-    # 3. get the subset of column names that match a permutation
+    # 4. collapse the test collection so that it is a single index - any column
+    #    that had one or more matches to a test pair is an interaction column
+    interaction_matrix <- matrix(unlist(interaction_test_collection), 
+                                 ncol = length(names(exp_data)), 
+                                 byrow = TRUE)
+    
+    interaction_index <- apply(interaction_matrix, 2, any)
+    
+    # 5. get the subset of column names that match a permutation
     interaction_col_names <- names(exp_data)[interaction_index]
     
-    # return the names of interaction columns
-    return(interaction_col_names)
+    # 6. get the regex terms that will allow us to split the columns (these
+    #    may be in a funny order)
+    reg_set_matches <- apply(interaction_matrix, 1, any)
+    
+    reg_set_matrix <- matrix(unlist(reg_set), ncol = 2, byrow = T)
+    
+    split_terms <- reg_set_matrix[,2][reg_set_matches]
+    
+    # 6. pair the column names with their regex split terms (fix any order
+    #    issues)
+    # NOTE: this first step gets just the first matching position - if the same
+    #       variable is the second of multiple interaction pairs, multiple 
+    #       values will be returned; this is not an issue because of how we
+    #       do the next step
+    split_term_order <- sapply(split_terms, function (x) 
+        grep(x, interaction_col_names, perl = TRUE)[1])
+    
+    #       recreating the terms collection in the correct order (this will fill
+    #       in duplicate matches as needed)
+    split_terms <- split_terms[c(split_term_order)]
+    
+    # 7. join the terms with the col names
+    interaction_cols <- data.frame(column_name = interaction_col_names, 
+                                   split_term = split_terms,
+                                   stringsAsFactors = FALSE)
+    
+    # return the collection of names and split terms
+    return(interaction_cols)
 }
 
 # We need to summarize the key details of each ribbon plot. This builds a text
@@ -784,4 +1001,4 @@ build_ribbon_summary <- function(x_axis_raw_name, variable_config_list) {
 
 ###############################################################################
 ## END OF SCRIPT
-###############################################################################
+###############################################################################                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           

@@ -82,6 +82,8 @@ variable_configuration <<- list(
                                      "index increases. The likelihood of ",
                                      "Emancipation (very unlikely) remains ",
                                      "stable at all index levels."),
+        annotation          = c("<- less trust", "more trust ->"),
+        annotation1         = c("very low", "low", "moderate", "high", "very high"),
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -109,6 +111,7 @@ variable_configuration <<- list(
                                      "unlikely) and Emancipation (very ",
                                      "unlikely) remain stable all index ",
                                      "levels."),
+        annotation          = c("<- worse relationship", "better relationship ->"),
         x_axis_candidate    = TRUE,    
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -129,6 +132,7 @@ variable_configuration <<- list(
                                      "this index - at least by itself - is ",
                                      "has little effect on the likelihood of ",
                                      "simulated case outcomes."),
+        annotation          = c("<- less receptivity", "more receptivity ->"),
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -159,6 +163,7 @@ variable_configuration <<- list(
                                      "increases.The likelihood of Adoption ",
                                      "(moderately likely) and Emancipation ",
                                      "(very unlikely) remain stable."),
+        annotation          = c("<- less buy-in", "more buy-in ->"),
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -190,6 +195,7 @@ variable_configuration <<- list(
                                      "likely. By 13 to 15 years of age, it is ",
                                      "the most likely outcome for simulated ",
                                      "cases."),
+        annotation          = NULL,
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -214,6 +220,7 @@ variable_configuration <<- list(
                                      "(unlikely) and Emancipation (very ",
                                      "unlikely) remain stable at all index ",
                                      "levels."),
+        annotation          = NULL,
         x_axis_candidate    = TRUE,
         slider_candidate    = TRUE,
         slider_rounding     = 1,
@@ -226,6 +233,7 @@ variable_configuration <<- list(
         definition          = paste0("An indicator of the administrative ",
                                      "region of the child welfare case."),
         ribbon_plot_summary = paste0(""),
+        annotation          = NULL,
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -239,6 +247,7 @@ variable_configuration <<- list(
                                      "parent reported full or part-time ",
                                      "employment."),
         ribbon_plot_summary = paste0(""),
+        annotation          = NULL,
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -252,6 +261,7 @@ variable_configuration <<- list(
                                      "parent reported any education beyond ",
                                      "high-school."),
         ribbon_plot_summary = paste0(""),
+        annotation          = NULL,
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -265,6 +275,7 @@ variable_configuration <<- list(
                                      "reported parental income is less than ",
                                      "(or equal to) 10,000 dollars."),
         ribbon_plot_summary = paste0(""),
+        annotation          = NULL,
         x_axis_candidate    = FALSE,
         slider_candidate    = FALSE,
         slider_rounding     = NA,
@@ -405,7 +416,7 @@ shinyUI(navbarPage(
                        br(),
                        br(),
                        
-                       uiOutput("explore_slider_set")
+                       uiOutput("explore_input_set")
                    )
                )
         ),
@@ -440,7 +451,7 @@ shinyUI(navbarPage(
                    br(),
                    br(),
                    
-                   uiOutput("sc_slider_set")
+                   uiOutput("sc_input_set")
                )
         ),
         

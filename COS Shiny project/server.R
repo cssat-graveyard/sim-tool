@@ -69,7 +69,8 @@ base_formula <<- outcome ~
     housing_hs_cnt + high_in + sm_coll + employ + REG + 
     # interaction terms
     high_in * housing_hs_cnt + 
-    housing_hs_cnt * employ
+    housing_hs_cnt * employ +
+    employ * high_in
 
 base_formula2 <<- outcome ~ 
     # additive terms
@@ -99,8 +100,8 @@ options(warn = -1)
 
 # use base data to expand variable_configuration to have all values needed to 
 # define sliders
-variable_configuration <<- add_slider_features(variable_configuration,
-                                               base_data)
+variable_configuration <<- add_input_features(variable_configuration,
+                                              base_data)
 
 # snag the outcome variable from the formula (simplifies later calls)
 outcome_variable <<- as.character(base_formula[[2]])
@@ -153,17 +154,18 @@ shinyServer(function(input, output, session) {
     })
     
     # generate the sliders for the "Explore Mode"
-    output$explore_slider_set <- renderUI({
-        make_sliders(variable_config_list = variable_configuration,
-                     variables_to_drop = x_axis_raw_name(),
-                     append_name = "explore")
+    output$explore_input_set <- renderUI({
+        make_inputs(variable_config_list = variable_configuration,
+                    variables_to_drop = x_axis_raw_name(),
+                    append_name = "explore")
     })
     
     # generate the sliders for the "Single Case Mode"
-    output$sc_slider_set <- renderUI({
-        make_sliders(variable_config_list = variable_configuration,
-                     variables_to_drop = NA,
-                     append_name = "sc")
+    output$sc_input_set <- renderUI({
+        make_inputs(variable_config_list = variable_configuration,
+                    variables_to_drop = NA,
+                    append_name = "sc",
+                    facet_as_dropdown = TRUE)
     })
     
     # generate representative data to feed coefficients
@@ -193,13 +195,17 @@ shinyServer(function(input, output, session) {
         #          explore_new_data() and resets the sliders if they are 
         #          visible)
         if(isolate(input$slider_show)) {
-            apply_slider_values(variable_config_list = variable_configuration,
-                                variables_to_drop = isolate(x_axis_raw_name()),
-                                append_name = "explore",
-                                # reactive link for when the sliders are visible
-                                update_target = base_new_data(),
-                                input_call = isolate(input),
-                                interaction_col_names = interaction_cols)
+            # note that the update_target here is allowed to be reactive
+            # to create a reactive link when the sliders are visible
+            apply_input_values(update_target = base_new_data(), 
+                               interaction_col_names = interaction_cols,
+                               variable_config_list = variable_configuration,
+                               input_call = isolate(input),               
+                               append_name = "explore",
+                               base_data = base_data,
+                               use_slider_values = TRUE,
+                               use_dropdown_values = FALSE,
+                               variables_to_drop = isolate(x_axis_raw_name()))
         } else {
             # reactive link for when the sliders are hidden
             return(base_new_data())
@@ -216,12 +222,15 @@ shinyServer(function(input, output, session) {
         # NOTE: there is only a single reactive pathway here - the "update_sc_
         #       data" input must be triggered - this insures that the
         #       visualization chain is only triggered on user request        
-        apply_slider_values(variable_config_list = variable_configuration,
-                            variables_to_drop = NA,
-                            append_name = "sc",
-                            update_target = isolate(base_new_data()),
-                            input_call = isolate(input),
-                            interaction_col_names = interaction_cols)
+        apply_input_values(update_target = isolate(base_new_data()), 
+                           interaction_col_names = interaction_cols,
+                           variable_config_list = variable_configuration,
+                           input_call = isolate(input),               
+                           append_name = "sc",
+                           base_data = base_data,
+                           use_slider_values = TRUE,
+                           use_dropdown_values = TRUE,
+                           variables_to_drop = NA)
     })
     
     # feed the representative data to the sampled coefficients to generate
@@ -281,7 +290,9 @@ shinyServer(function(input, output, session) {
                         facet_selected = isolate(facet_raw_name()),
                         y_lab = "Simulated Probability", 
                         x_lab = isolate(input$x_axis_choice),
-                        custom_colors = portal_colors
+                        custom_colors = portal_colors,
+                        isolate(variable_configuration[[x_axis_var]]$annotation),
+                        isolate(variable_configuration[[x_axis_var]]$annotation1)
         )
     })
     
