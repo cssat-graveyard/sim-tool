@@ -7,18 +7,25 @@ As of this writing, the available modes are:
 * Explore Mode: designed for academics and policy makers, appropriate for observing how outcome likelihoods change across a range of values
 * Single Case Mode: designed for case workers, appropriate for simulating the likelihood of outcomes based on inputs for a single case
 
-It is worth noting that the COS is a specific instance of an application built to be usable with a most multinomial models/datasets. Changing the model/dataset simply requires updating the relevant sections of the application config file [IN PROGRESS] to point the application at the correct data object, specify the desired formula, and provide key coefficient information (impacts what variables users can see and interact with).
+It is worth noting that the COS is a specific instance of an application built to be usable with many possible multinomial models/datasets. Changing the model/dataset simply requires updating the relevant sections of the application config file [IN PROGRESS] to point the application at the correct data object, specify the desired formula, and provide key coefficient information (impacts what variables users can see and interact with and what users know about these variables).
 
 ## Setting Up the AWS EC2 Instance
 Currently this application is deployed via [Amazon's EC2 service](http://aws.amazon.com/ec2/?sc_channel=PS&sc_campaign=acquisition_US&sc_publisher=google&sc_medium=ec2_b&sc_content=ec2_e&sc_detail=amazon.ec2&sc_category=ec2&sc_segment=53611778562&sc_matchtype=e&sc_country=US&s_kwcid=AL!4422!3!53611778562!e!!g!!amazon.ec2&ef_id=VTlq7QAAAQOLjYDQ:20150511210335:s). What follows will describe how to setup a (free) micro instance for the COS using the EC2 Ubuntu AMI.
 
 ### Launching the Instance
-http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-launch-instance_linux.html
-- we've been using the Ubuntu AMI
+First step, we need to create an instance. This guide will assume you have access to an Amazon Web Service's (AWS) account and know how to login.
+
+Once you've logged in, follow Amazon's [instance launch instructions](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-launch-instance_linux.html), noting the following: 
+* The guide assumes that you will use the Ubuntu Amazon Machine Image (AMI). If you want to use a different AMI, please be prepared to figure out the correct default user name and shell commands.
 
 ### Authorize Inbound Traffic to the Instance
-http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/authorizing-access-to-an-instance.html
-- actually probably okay by default; instead should double check that instance is secure enough
+We have an instance. Now we need to make sure we (and our users) can talk to it. By default, AWS gives very broad access privileges. At least initially, this is probably fine.
+
+Verify the server's inbound traffic rules by following [these directions](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/authorizing-access-to-an-instance.html).
+
+If needed, updated the selected security group to allow access via SSH (universally or to your specific IP).
+
+**EDITS HAPPENING HERE**
 
 ### Setup Putty to Access the Instance
 http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/putty.html	
