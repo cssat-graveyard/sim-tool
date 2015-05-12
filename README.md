@@ -66,7 +66,7 @@ deb http://cran.cs.wwu.edu/bin/linux/ubuntu trusty/
 * The line points to the Ubuntu version Trusty repository. If you used a different Amazon AMI than Ubuntu or if the version has changed from Trusty, you will need to adjust the line accordingly.
 
 ### Install and Configure R, Shiny, and Shiny Server
-Alright, it's time at last to get our core tools installe and configured. The steps below are described in more detail [here](https://github.com/chrisrzhou/RShiny-EC2Bootstrap#install-r).
+Alright, it's time at last to get our core tools installed and configured. The steps below are described in more detail [here](https://github.com/chrisrzhou/RShiny-EC2Bootstrap#install-r).
 
 First we make sure all the server files are up to date.
 ```
@@ -106,16 +106,16 @@ sudo apt-get install shiny-server
 ```
 
 We configure Shiny Server to run under the appropriate user account (ubuntu) and to look for our shiny apps in the right location (a subdirectory in the ubuntu user directory).
-1. Make the app-hosting folder and the logs folder (using whatever names you like).
+* Make the app-hosting folder and the logs folder (using whatever names you like).
 ```
 mkdir /home/ubuntu/shiny_apps
 mkdir /home/ubuntu/shiny_logs
 ```
-2. Adjust the shiny config file to (a) point to the appropriate directories and (b) run under ubuntu. More information about the config file and its features is available [here](http://rstudio.github.io/shiny-server/latest/#default-configuration).
+* Adjust the shiny config file to (a) point to the appropriate directories and (b) run under ubuntu. More information about the config file and its features is available [here](http://rstudio.github.io/shiny-server/latest/#default-configuration).
 ```
 sudo vi /etc/shiny-server/shiny-server.conf
 ```
-3. Finally, open the Shiny Server default port (3838) so that users will be able to reach the hosted applications. This is done through the AWS EC2 menus (not the console). Follow [these directions](http://stackoverflow.com/questions/5004159/opening-port-80-ec2-amazon-web-services/10454688#10454688).
+* Finally, open the Shiny Server default port (3838) so that users will be able to reach the hosted applications. This is done through the AWS EC2 menus (not the console). Follow [these directions](http://stackoverflow.com/questions/5004159/opening-port-80-ec2-amazon-web-services/10454688#10454688).
 
 ### Install and Configure Git
 The best way to get our application(s) onto the EC2 server - and to setup an efficient development-to-production pathway - is to use git and GitHub. This guide assumes your applications are already hosted on GitHUb, so now you just need to install git.
