@@ -123,7 +123,7 @@ The best way to get our application(s) onto the EC2 server - and to setup an eff
 sudo apt-get install git
 ```
 
-***Note***: If you've never used SSH with the relevant GitHub account before, you might need to do [some more setup](https://help.github.com/articles/generating-ssh-keys/) before your git clone/pull requests will succeed.
+**Note**: If you've never used SSH with the relevant GitHub account before, you might need to do [some more setup](https://help.github.com/articles/generating-ssh-keys/) before your git clone/pull requests will succeed.
 
 ### Cloning and Configuring the Shiny App(s)
 At this point, we have R, Shiny, and Shiny Server installed and configured to play nicely with the default ubuntu account. We also have a pathway for pulling up to date versions of our Shiny application(s) to our server.
