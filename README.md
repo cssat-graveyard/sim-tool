@@ -131,7 +131,7 @@ At this point, we have R, Shiny, and Shiny Server installed and configured to pl
 Now we need to clone our app(s) in our chosen app hosting folder (e.g., ```/home/ubuntu/shiny_apps```) and install any needed R packages or other resources. From here, app setup directions will be described on an app-by-app basis.
 
 #### The Case Outcome Simulator (COS)
-COS uses "packrat" to manage its package dependencies. All we need to do is clone the project and then start R in the COS application directory ("./ubuntu/sim-tool/COS Shiny project"). "packrat" will install all of the relevant packages from their binaries (which "packrat" keeps copies of). 
+COS uses "packrat" to manage its package dependencies. All we need to do is clone the project and then start R in the COS application directory. "packrat" will install all of the relevant packages from their binaries (which "packrat" keeps copies of). 
 
 However, the Cairo package is special and attempts to install it will fail unless the correct resources are added to our EC2 server.
 
@@ -141,13 +141,13 @@ sudo apt-get install libcairo2-dev
 sudo apt-get install libcairo2-dev
 ```
 
-And we clone the app...
+Now we clone the app...
 ```
 cd /home/ubuntu/shiny_apps/
 git clone https://github.com/pocdata/sim-tool
 ```
 
-Then we initialize R in the COS Shiny project folder ("packrat" should automatically try to install all needed packages)
+And initialize R in the COS Shiny project folder - "packrat" should automatically try to install all needed packages.
 ```
 cd /home/ubuntu/shiny_apps/sim-tool/COS\ Shiny\ project/
 R
