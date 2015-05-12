@@ -167,7 +167,7 @@ shiny-server
 
 You should see some confirmation dialogue and see that the server is running. 
 
-**Note**:If you get EADDRINUSE errors... try changing the port Shiny is using (e.g., to 3939). Don't forget that you need to add this port to the EC2 inbound security group AND that this changes the link people need to use to reach the app.
+**Note**: If you get EADDRINUSE errors... try changing the port Shiny is using (e.g., to 3939). Don't forget that you need to add this port to the EC2 inbound security group AND that this changes the link people need to use to reach the app.
 
 The link you're looking for will be a combination of (a) the EC2 server's Public DNS, (b) the Shiny Server port number, and (c) the application subdirectory.
 ```
