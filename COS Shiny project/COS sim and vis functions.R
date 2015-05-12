@@ -870,7 +870,7 @@ get_interaction_col_names <- function(base_formula, exp_data) {
     
     # now we collect just those terms that have an interaction symbol "*"
     # TODO check for : to mark interactions
-    interaction_terms <- grep("*", formula_parsed, fixed = TRUE, value = TRUE)
+    interaction_terms <- grep("\\*|:", formula_parsed, value = TRUE)
     
     # quickly check to see if there are any interaction terms at all - if none
     # we want to return "NA" so that later steps in this function don't fail
@@ -881,7 +881,7 @@ get_interaction_col_names <- function(base_formula, exp_data) {
     }
     
     # for each term, we extract the variable names
-    interaction_terms <- strsplit(interaction_terms, "*", fixed = TRUE)
+    interaction_terms <- strsplit(interaction_terms, "\\*|:")
     
     # for each term, we need to construct all possible combinations of the 
     # variable names (variable names separated by a "." and - for factor-factor

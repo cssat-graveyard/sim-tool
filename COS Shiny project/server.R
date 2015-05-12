@@ -68,26 +68,6 @@ base_formula <<- outcome ~
     non_min + male + log_par_age + married + hhnum_c + rel_plc + log_eps_rank + 
     housing_hs_cnt + high_in + sm_coll + employ + REG + 
     # interaction terms
-    high_in * housing_hs_cnt + 
-    housing_hs_cnt * employ +
-    employ * high_in
-
-base_formula2 <<- outcome ~ 
-    # additive terms
-    mist_scores + wrkg_scores + recep_scores + buyn_scores + log_age_eps_begin + 
-    non_min + male + log_par_age + married + hhnum_c + rel_plc + log_eps_rank + 
-    sm_coll + employ + REG + 
-    # interaction terms
-    high_in * housing_hs_cnt + 
-    housing_hs_cnt * employ
-
-
-base_formula3 <<- outcome ~ 
-    # additive terms
-    mist_scores + wrkg_scores + recep_scores + buyn_scores + log_age_eps_begin + 
-    non_min + male + log_par_age + married + hhnum_c + rel_plc + log_eps_rank + 
-    housing_hs_cnt + high_in + sm_coll + employ + REG + 
-    # interaction terms
     high_in : housing_hs_cnt + 
     housing_hs_cnt : employ
 
