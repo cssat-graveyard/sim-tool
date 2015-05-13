@@ -78,7 +78,10 @@ MOS_theme <<- theme_bw(16) +
           axis.title.x = element_text(vjust = -3),
           axis.title.y = element_text(vjust = 3),
           plot.margin = grid::unit(c(1, 1, 1, 1), "cm"),
-          aspect.ratio = 2 / (1 + sqrt(5))
+          aspect.ratio = 2 / (1 + sqrt(5)),
+          strip.background = element_rect(color = "#10475B", fill = "#10475B"),
+          panel.border = element_rect(color = "#10475B"),
+          axis.ticks = element_line(color = "#10475B")
     )
 
 ###############################################################################

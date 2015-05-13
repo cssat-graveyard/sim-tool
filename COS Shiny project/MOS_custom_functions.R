@@ -308,7 +308,9 @@ get_cf_cases <- function(exp_data,
     
     # now we quickly reorder our new data object so that the columns match
     # the order of our simulated coefficients objects
-    counterfactuals <- counterfactuals[all.vars(exp_formula)[2:length(all.vars(exp_formula))]]
+    counterfactuals <- counterfactuals[
+        all.vars(exp_formula)[2:length(all.vars(exp_formula))]
+        ]
     
     # we wrap up by returning the counterfactual set
     return(counterfactuals)
@@ -382,11 +384,14 @@ MOS_mlogitsimev <- function (x, b, ci = 0.95, constant = 1, z = NULL, g = NULL,
         usegamma <- FALSE
     }
     if (usegamma && !is.array(z)) {
-        stop("if g is provided, z must be an array with dimension 3 equal to the number of categories")
+        stop(paste0("if g is provided, z must be an array with dimension 3 ",
+                    "equal to the number of categories"))
     }
     esims <- nrow(as.matrix(b))
-    res <- list(lower = array(0, dim = c(dim(x)[1], (dim(x)[3] + 1), length(ci))), 
-                upper = array(0, dim = c(dim(x)[1], (dim(x)[3] + 1), length(ci)))
+    res <- list(lower = array(0, dim = c(dim(x)[1], (dim(x)[3] + 1), 
+                                         length(ci))), 
+                upper = array(0, dim = c(dim(x)[1], (dim(x)[3] + 1), 
+                                         length(ci)))
     )
     if (predict) 
         res$pv <- NULL
@@ -413,10 +418,9 @@ MOS_mlogitsimev <- function (x, b, ci = 0.95, constant = 1, z = NULL, g = NULL,
         
         for (icat in 1:dim(x)[3]) {
             if (usegamma) 
-                simy[, icat] <- exp(b[, , icat] %*% x[iscen, 
-                                                      , icat] + g %*% z[iscen, , icat])/simdenom
-            else simy[, icat] <- exp(b[, , icat] %*% x[iscen, 
-                                                       , icat])/simdenom
+                simy[, icat] <- exp(b[, , icat] %*% x[iscen, , icat] + 
+                                        g %*% z[iscen, , icat])/simdenom
+            else simy[, icat] <- exp(b[, , icat] %*% x[iscen, , icat])/simdenom
         }
         if (usegamma) 
             simy[, ncol(simy)] <- exp(g %*% z[iscen, , dim(g)[3]])/simdenom
@@ -443,10 +447,12 @@ MOS_mlogitsimev <- function (x, b, ci = 0.95, constant = 1, z = NULL, g = NULL,
         low <- up <- NULL
         for (k in 1:length(ci)) {
             for (icat in 1:(dim(b)[3] + 1)) {
-                res$lower[iscen, icat, k] <- rbind(low, quantile(simy[, 
-                                                                      icat], probs = (1 - ci[k])/2))
-                res$upper[iscen, icat, k] <- rbind(up, quantile(simy[, 
-                                                                     icat], probs = (1 - (1 - ci[k])/2)))
+                res$lower[iscen, icat, k] <- 
+                    rbind(low, quantile(simy[, icat], 
+                                        probs = (1 - ci[k])/2))
+                res$upper[iscen, icat, k] <- 
+                    rbind(up, quantile(simy[, icat], 
+                                       probs = (1 - (1 - ci[k])/2)))
             }
         }
         if (predict) {
@@ -459,10 +465,12 @@ MOS_mlogitsimev <- function (x, b, ci = 0.95, constant = 1, z = NULL, g = NULL,
             low <- up <- NULL
             for (k in 1:length(ci)) {
                 for (icat in 1:(dim(b)[3] + 1)) {
-                    res$plower[iscen, icat, k] <- rbind(low, quantile(pv[, 
-                                                                         icat], probs = (1 - ci[k])/2))
-                    res$pupper[iscen, icat, k] <- rbind(up, quantile(pv[, 
-                                                                        icat], probs = (1 - (1 - ci[k])/2)))
+                    res$plower[iscen, icat, k] <- 
+                        rbind(low, quantile(pv[, icat], 
+                                            probs = (1 - ci[k])/2))
+                    res$pupper[iscen, icat, k] <- 
+                        rbind(up, quantile(pv[, icat], 
+                                           probs = (1 - (1 - ci[k])/2)))
                 }
             }
         }
@@ -506,10 +514,9 @@ format_for_ribbon_plot <- function(raw_likelihoods,
                                    "upper95", "upper50", 
                                    "pe"), 
                                  each = nrow(raw_likelihoods$upper))
-    # if available,
-    # we also add the predictor (x-axis) value that will link the unique sets
-    # (lower, upper, pe) - this should naturally repeat to the appropriate
-    # length
+    # if available, we also add the predictor (x-axis) value that will link the 
+    # unique sets (lower, upper, pe) - this should naturally repeat to the 
+    # appropriate length
     if(!is.na(x_axis_selected)) {
         tidy_sim$predictor <- counterfactuals[[x_axis_selected]]
     } else {
@@ -642,11 +649,7 @@ get_ribbon_plot <- function(formatted_likelihoods,
     # if custom colors are provided, adjust the color scale and update theme
     if(!is.null(custom_colors)) {
         plot_object <- plot_object + 
-            scale_fill_manual(values = custom_colors) +
-            theme(strip.background = element_rect(color = custom_colors[8], 
-                                                  fill = custom_colors[8]),
-                  panel.border = element_rect(color = custom_colors[8]),
-                  axis.ticks = element_line(color = custom_colors[8]))
+            scale_fill_manual(values = custom_colors)
     }
     
     # if a facet variable is set, add the facet layer to the plot object
@@ -670,7 +673,7 @@ get_dot_cloud_plot <- function(formatted_likelihoods,
         # the geoms
         geom_jitter(position = position_jitter(width = 0.25, height = 0)) +
         # label adjustments
-        labs(title = "The Likelihood of Each Outcome for 1000 Simulated Cases",
+        labs(title = "The Likelihood of Each Outcome for Over 1000 Simulations",
              x = x_lab, y = y_lab) +
         # scale adjustments
         scale_x_discrete(limits = rev(levels(formatted_likelihoods$outcome))) +
@@ -684,11 +687,7 @@ get_dot_cloud_plot <- function(formatted_likelihoods,
     # if custom colors are provided, adjust the color scale and update theme
     if(!is.null(custom_colors)) {
         plot_object <- plot_object + 
-            scale_color_manual(values = custom_colors) +
-            theme(strip.background = element_rect(color = custom_colors[8], 
-                                                  fill = custom_colors[8]),
-                  panel.border = element_rect(color = custom_colors[8]),
-                  axis.ticks = element_line(color = custom_colors[8]))
+            scale_color_manual(values = custom_colors)
     }
     
     # return the plot object
