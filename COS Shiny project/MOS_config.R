@@ -131,7 +131,7 @@ base_formula <-
 #                               1 will force the slider for this variable to
 #                               snap to whole numbers) (REQUIRED, defaults to
 #                               0.1 if NA, only impacts slider_candidates),
-#         facet_candidate     = TRUE or FALSE, allow the varaible to be 
+#         facet_candidate     = TRUE or FALSE, allow the variable to be 
 #                               selected as a facet on the ribbon plot
 #                               (REQUIRED, variable will be forced to factor if
 #                               TRUE),
@@ -390,7 +390,7 @@ custom_css = "bootstrap.css"
 # text after the auto-generated ribbon plot text (variable name, definition,
 # and key trends) - you will need to add line breaks where needed. Set to NULL
 # if you don't want any added text.
-ribbon_addendum <- 
+ribbon_addendum <- NULL
     paste0("<br><strong>Please Keep In Mind</strong>",
            
            "<br>Our simulation cannot tell if the observed relationships are",

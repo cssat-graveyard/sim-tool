@@ -2,79 +2,70 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/25/2015
-# Date updated: 5/12/2015
-
-# NOTE: Functions were largely developed in the "gator model example V3.R"
-#       script. That script was archived to allow us to seperate the model
-#       from the functions working with the model.
+# Date updated: 5/13/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
 
-# goal: Provide the suite of functions needed to create the visualization for
-#       the Partners for Our Children COS (Case Outcome Simulator) application.
+# GOAL: This script provides the suite of custom functions that allow the 
+#       Multinomial Outcome Simulator (MOS) to generate and manage the 
+#       simulations, visualizations, and user interactions that make up the 
+#       application.
 #
-#       The functions:
-#       - take a given multinomial model, an x-axis selection, and an (optional)
-#         facet selection
-#       - sample a range of values for each model coefficient with respect to 
-#         the uncertainty associated with each coeffecient
-#       - generate a range of inputs for the predictor associated with the 
-#         x-axis selection (and facet selection, if present) and combine it with 
-#         reasonable fixed values for other model coefficients
-#       - generate simulated predicted likelihoods for each model outcome by
-#         combining the input combinations with the sampled coefficients and
-#         summarizing the results (upper quartile, lower quartile, mean pe)
-#       - create a plot object visualizing the simulated likelihoods along the
-#         given x-axis selection (facetting if appropriate)
-#
-#       Generating the predicted likelihoods is handled by the simcf package.
-#       The code developed here is loosely based on an example provided by
-#       that package.
+#       The simulation process was heavily inspired by code authored by
+#       Chris Adolph (http://faculty.washington.edu/cadolph/) and this script
+#       makes use of original and modified versions of this code in several
+#       places.
 #
 #       Where to find the original example code:
 #       library(simcf)
 #       help(mlogitsimev)
 #
-#       The original example code was vague, limited and somewhat broken. It has
-#       been corrected, extended, and made into a function set (performance 
-#       testable) for the COS application.
+#       The original code was not designed for the generalizations or end uses
+#       needed by the MOS. It has been corrected, extended, and made into
+#       a function set (performance testable).
 #
-#       The COS application itself is a an R Shiny application that uses the
-#       functions in this script to allow users to interact with and visualize
-#       a given multinomial logit model.
-
-# sketch of script
-# - LOAD SUPPORTING LIBRARIES
+#       Given the importance of the simulation process to the MOS, here is a
+#       quick outline of it:
+#       - take a given data set and model formula and fit a multinomial model
+#         to the data
+#       - sample a range of values for each model coefficient with respect to 
+#         the uncertainty associated with each coeffecient
+#       - based on user inputs, generate a set of counterfactuals - a collection
+#         of example cases that span a user-defined range (e.g., if an x-axis
+#         is selected, we want a data frame where the x-axis variable varies
+#         and all other variables are fixed to a reasonable value)
+#       - pass these example cases through our sampled model coefficients, 
+#         generated likelihood estimates for each outcome for each case
+#       - visualize the relationship between the likelihoods and the outcomes
+#         with respect to user inputs (this may or may not require that the
+#         likelihood estimates be summarized for each case)
 #
-# - LOAD SOURCE DATASET
-#   - tidy, properly formatted and labelled dataset to fit the multinom model to
+# SCRIPT OUTLINE:
+# - Load Supporting Packages
 #
-# - FUNCTIONS TO GENERATE OUTCOME PREDICTIONS
-#   - create an expanded version of the source dataset (using same model as
-#     will be used in the multinom fitting)
-#   - fit the multinom model
-#   - extract point estimates from the model object
-#   - solve the model object Hessian matrix for the covariance matrix
-#   - get coefficient estimates via simulation
-#   - generate data to feed to coefficient estimates
-#   - get the outcome predictions (feed the estimates!)
+# - Functions to Simulate Outcome Likelihoods
+#   - The family of functions that used to go from base data to a data frame
+#     of outcome likelihoods that can be visualized.
 #
-# - FUNCTIONS TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
-#   - rearrange the outcome predictions to interface with ggplot (tidy 
-#     dataframe)
-#   - visualize with ggplot
-#   - may be multiple visualizations for development purposes
+# - Functions to Visualize Outcome Likelihoods
+#   - The family of functions that re-formats (if needed) the likelihood
+#     data frames and generates the relevant visualizations (ribbon plot
+#     and dot cloud plot).
 #
-# - ADDITIONAL HELPER FUNCTIONS (TO CONSOLIDATE CERTAIN SHINY SERVER TASKS)
-#   - expanding the variable configuration object to complete the values
-#     needed to define the sliders
-#   - generate a slider set
-#   - determine which columns in the expanded data represent interactions
+# - Assorted Helper Functions
+#   - A function that makes easy-to-access lists of variable names associated
+#     with fixed UI options (e.g., which variables are x-axis candidates).
+#   - A function to identify which columns in the expanded data frame represent
+#     interactions.
+#   - A trio of functions to generate additional definitions for user inputs,
+#     create the user inputs, and apply the values from the user inputs.
+#   - A function to define the ribbon plot summaries based on variable
+#     configuration features.
 
 ###############################################################################
-## LOAD SUPPORTING LIBRARIES
-#   - to get simcf (a custom package on github), use the install_github 
+## Load Supporting Packages
+#   - To get simcf (a custom package on github), use the install_github 
 #     function from the devtools package:
 #     install_github("chrisadolph/tile-simcf", subdir = "simcf")
 
@@ -90,7 +81,7 @@ library(scales)     # for nice plot scales
 library(grid)       # need for "unit" function passed to ggplot
 
 ###############################################################################
-## FUNCTIONs TO GENERATE OUTCOME PREDICTIONS FOR GIVEN MODEL OBJECT
+## Functions to Simulate Outcome Likelihoods
 #   - create an expanded version of the source dataset (using same model as
 #     will be used in the multinom fitting)
 #   - fit the multinom model
@@ -176,8 +167,8 @@ get_coefficient_estimates <- function(sample_size,
     return(sim_beta_array)
 }
 
-# generate data to feed the coefficient estimates
-get_new_data <- function(exp_data, 
+# generate counterfactual cases to feed the coefficient estimates
+get_cf_cases <- function(exp_data, 
                          base_data, 
                          model_object,
                          x_axis_selected, 
@@ -292,8 +283,8 @@ get_new_data <- function(exp_data,
         interaction_list <- list()
         for(index in 1:length(interaction_vars)) {
             current_split <- strsplit(interaction_vars[index], 
-                                  split_terms[index], 
-                                  perl = TRUE)
+                                      split_terms[index], 
+                                      perl = TRUE)
             
             interaction_list[[index]] <- current_split
         }
@@ -323,11 +314,164 @@ get_new_data <- function(exp_data,
     return(counterfactuals)
 }
 
-# simulate expected probabilities using the new data and the coefficients
-# NO NEW FUNCTION NEEDED - THIS IS HANDLED BY mlogitsimev
+# Simulate expected probabilities using the new data and the coefficients:
+# This is a minor revision of Chris Adolph's mlogitsimev function from
+# his simcf package (https://github.com/chrisadolph/tile-simcf).
+#
+#       The function passes representative generated data to a collection of
+#       simulated coefficients. It then summarizes the results to return key
+#       features for each representative case passed to the cofficients:
+#       point estimate (mean), upper value (quantile based on given confidence 
+#       interval), lower value (quantile based on given confidence interval).
+#
+#       The updated function (changes are marked with ## REVISION ##):
+#       1. Changes the point estimate technique from "mean" (as described above)
+#          to "median". This is perhaps a more common choice for this kind of
+#          simulation and avoids issues that arise as confidence intervals get
+#          narrow (e.g., the mean falling outside the upper and lower 
+#          quartiles).
+#       2. Allows the user to request the "cloud" that results from feeding
+#          the represenative data to the coefficient estimates. This prevents
+#          the normal function behavior, which returns a summary of these 
+#          results for each case in the representative data.
+#       3. Adjusts order of the outcome columns to match intuitive expectations
+#          (reference outcome is ordered as the FIRST column rather than LAST).
+#          Originally, the reference outcome was ordered as the LAST column, but
+#          in most models/outputs the reference outcome is ordered FIRST.
+MOS_mlogitsimev <- function (x, b, ci = 0.95, constant = 1, z = NULL, g = NULL, 
+                             predict = FALSE, sims = 10, 
+                             ## REVISION ##
+                             # added return_cloud argument
+                             return_cloud = FALSE) 
+{
+    if (!is.array(b)) {
+        stop("b must be an array")
+    }
+    if (any(class(x) == "counterfactual") && !is.null(x$model)) {
+        x <- model.matrix(x$model, x$x)
+        x <- array(x, dim = c(nrow(x), ncol(x), dim(b)[3]))
+    }
+    else {
+        if (any(class(x) == "list")) 
+            x <- x$x
+        if (is.data.frame(x)) 
+            x <- as.matrix(x)
+        if (!is.array(x)) {
+            if (!is.matrix(x)) {
+                x <- t(x)
+            }
+            x <- array(x, dim = c(nrow(x), ncol(x), dim(b)[3]))
+        }
+        else {
+            x <- array(x, dim = c(nrow(x), ncol(x), dim(b)[3]))
+        }
+        if (!is.na(constant)) {
+            xnew <- array(NA, dim = c(nrow(x), (ncol(x) + 1), 
+                                      dim(b)[3]))
+            for (i in 1:dim(x)[3]) {
+                xnew[, , i] <- appendmatrix(x[, , i, drop = FALSE], 
+                                            rep(1, dim(x)[1]), constant)
+            }
+            x <- xnew
+        }
+    }
+    if (!is.null(g)) {
+        usegamma <- TRUE
+    }
+    else {
+        usegamma <- FALSE
+    }
+    if (usegamma && !is.array(z)) {
+        stop("if g is provided, z must be an array with dimension 3 equal to the number of categories")
+    }
+    esims <- nrow(as.matrix(b))
+    res <- list(lower = array(0, dim = c(dim(x)[1], (dim(x)[3] + 1), length(ci))), 
+                upper = array(0, dim = c(dim(x)[1], (dim(x)[3] + 1), length(ci)))
+    )
+    if (predict) 
+        res$pv <- NULL
+    for (iscen in 1:dim(x)[1]) {
+        simdenom <- 0
+        for (icat in 1:(dim(b)[3])) {
+            if (usegamma) {
+                newdenom <- exp(b[, , icat] %*% x[iscen, , icat] + 
+                                    g %*% z[iscen, , icat])
+            }
+            else {
+                newdenom <- exp(b[, , icat] %*% x[iscen, , icat])
+            }
+            simdenom <- simdenom + newdenom
+        }
+        if (usegamma) {
+            simdenom <- simdenom + exp(g %*% z[iscen, , dim(z)[3]])
+        }
+        else {
+            simdenom <- simdenom + 1
+        }
+        simy <- matrix(NA, nrow = dim(b)[1], ncol = (dim(b)[3] + 
+                                                         1))
+        
+        for (icat in 1:dim(x)[3]) {
+            if (usegamma) 
+                simy[, icat] <- exp(b[, , icat] %*% x[iscen, 
+                                                      , icat] + g %*% z[iscen, , icat])/simdenom
+            else simy[, icat] <- exp(b[, , icat] %*% x[iscen, 
+                                                       , icat])/simdenom
+        }
+        if (usegamma) 
+            simy[, ncol(simy)] <- exp(g %*% z[iscen, , dim(g)[3]])/simdenom
+        else simy[, ncol(simy)] <- 1/simdenom
+        
+        simy <- apply(simy, 2, sort)
+        
+        ## REVISION ##
+        # reorder columns so the REFERENCE OUTCOME is now the FIRST column
+        simy <- simy[, c(4, 1:3)]
+        
+        
+        ## REVISION ##
+        # return the cloud of estimates if requested
+        if(return_cloud) {
+            return(simy)
+        }
+        
+        ## REVISION ##
+        # technique for calculating point estimate (pe) changed from mean to
+        # median
+        res$pe <- rbind(res$pe, apply(simy, 2, median))
+        length.simy <- nrow(simy)
+        low <- up <- NULL
+        for (k in 1:length(ci)) {
+            for (icat in 1:(dim(b)[3] + 1)) {
+                res$lower[iscen, icat, k] <- rbind(low, quantile(simy[, 
+                                                                      icat], probs = (1 - ci[k])/2))
+                res$upper[iscen, icat, k] <- rbind(up, quantile(simy[, 
+                                                                     icat], probs = (1 - (1 - ci[k])/2)))
+            }
+        }
+        if (predict) {
+            pv <- NULL
+            for (ipred in 1:dim(b)[1]) {
+                pv <- c(pv, resample(1:dim(simy)[2], size = sims, 
+                                     prob = simy[ipred, ], replace = TRUE))
+            }
+            res$pv <- rbind(res$pv, pv)
+            low <- up <- NULL
+            for (k in 1:length(ci)) {
+                for (icat in 1:(dim(b)[3] + 1)) {
+                    res$plower[iscen, icat, k] <- rbind(low, quantile(pv[, 
+                                                                         icat], probs = (1 - ci[k])/2))
+                    res$pupper[iscen, icat, k] <- rbind(up, quantile(pv[, 
+                                                                        icat], probs = (1 - (1 - ci[k])/2)))
+                }
+            }
+        }
+    }
+    res
+}
 
 ###############################################################################
-## FUNCTIONS TO VISUALIZE OUTCOME PREDICTIONS (USER SELECTED X-AXIS/FACETTING)
+## Functions to Visualize Outcome Likelihoods
 
 format_for_ribbon_plot <- function(raw_likelihoods, 
                                    model_object, 
@@ -552,7 +696,174 @@ get_dot_cloud_plot <- function(formatted_likelihoods,
 }
 
 ###############################################################################
-## ADDITIONAL HELPER FUNCTIONS
+## Assorted Helper Functions
+
+# Extract the fixed ui options (the levels for any ui features that are
+# generated statically - such as the x-axis choices - rather than dynamically -
+# such as the sliders).
+get_fixed_ui_options <- function(variable_config_list) {
+    # collect the x-axis options names and definitions
+    x_axis_options <- c()
+    x_axis_definitions <- c()
+    for(index in 1:length(variable_config_list)) {
+        if(variable_config_list[[index]]$x_axis_candidate) {
+            current_name       <- variable_config_list[[index]]$pretty_name
+            current_def        <- variable_config_list[[index]]$definition
+            x_axis_options     <- c(x_axis_options, current_name)
+            x_axis_definitions <- c(x_axis_definitions, current_def)
+        }
+    }
+    
+    # collect the facet options names and definitions
+    facet_options <- c()
+    facet_definitions <- c()
+    for(index in 1:length(variable_config_list)) {
+        if(variable_config_list[[index]]$facet_candidate) {
+            current_name      <- variable_config_list[[index]]$pretty_name
+            current_def       <- variable_config_list[[index]]$definition
+            facet_options     <- c(facet_options, current_name)
+            facet_definitions <- c(facet_definitions, current_def)
+        }
+    }
+    
+    # return all option collections
+    list(x_axis_options     = x_axis_options, 
+         x_axis_definitions = x_axis_definitions,
+         facet_options      = facet_options,
+         facet_definitions  = facet_definitions)
+}
+
+# We need to be able to identify columns that are the result of interactions
+# between base variables. However, the base data expansion makes it difficult
+# to recover these columns - it also expands factor levels and does not use
+# a unique separator for interaction combinations v. factor levels. This
+# function finds the possible name permutations that may result from
+# interactions and identifies columns that have matches - which will be the
+# interaction columns.
+get_interaction_col_names <- function(base_formula, exp_data) {
+    # convert the base formula into a single character string (ignoring the 
+    # outcome variable)
+    formula_string <- as.character(base_formula)[[3]]
+    
+    # parse all the separate terms (not variables but rather anything that
+    # occurs before or after a "+" symbol)
+    formula_parsed <- strsplit(formula_string, "+", fixed = TRUE)
+    
+    # get rid of any spaces (note that strsplit returns a list - we unlist to 
+    # make sure we work with a character vector)
+    formula_parsed <- gsub(" ", "", unlist(formula_parsed))
+    
+    # now we collect just those terms that have an interaction symbol "*"
+    # TODO check for : to mark interactions
+    interaction_terms <- grep("\\*|:", formula_parsed, value = TRUE)
+    
+    # quickly check to see if there are any interaction terms at all - if none
+    # we want to return "NA" so that later steps in this function don't fail
+    # and so that we can identify the lack of interaction terms correctly in
+    # later functions
+    if(length(interaction_terms) == 0) {
+        return(NA)
+    }
+    
+    # for each term, we extract the variable names
+    interaction_terms <- strsplit(interaction_terms, "\\*|:")
+    
+    # for each term, we need to construct all possible combinations of the 
+    # variable names (variable names separated by a "." and - for factor-factor
+    # interactions - possibly some other "." and text) - these are what we 
+    # will use to identity the interaction data columns in the expanded data 
+    # frame
+    # 1. get the permutations of the variable name strings
+    interaction_combos <- lapply(interaction_terms, permn)
+    # 2. build the regex search strings to test if there are column matches 
+    #    for each permutation (first term will always start the column name,
+    #    second term will always occur somewhere in the string immediately
+    #    after a period)
+    reg_set <- c()
+    
+    for(combo_index in 1:length(interaction_combos)) {
+        current_combo <- interaction_combos[[combo_index]]
+        reg_combo <- list()
+        
+        for(subset_index in 1:length(current_combo)) {
+            current_subset <- current_combo[[subset_index]]
+            
+            # first pattern
+            first_pattern <- c(paste0("^", current_subset[[1]]))
+            
+            # second pattern (note that we only need to make up to the two-
+            # way match - all three-way+ matches will be matched by a two-way;
+            # also note that we match the PERIOD that occurs before the 
+            # variable name - this let's us re-use this term to split
+            # the name later on)
+            second_pattern <- paste0("\\.(?=", 
+                                     current_subset[[2]], 
+                                     "[a-zA-Z])|",
+                                     "\\.(?=", current_subset[[2]], "$)")
+            
+            reg_combo[[subset_index]] <- c(first_pattern, second_pattern)
+        }
+        
+        reg_set[[combo_index]] <- reg_combo
+    }
+    
+    # 3. test the regex pairs against the exp_data names to see which columns
+    #    are interaction columns
+    interaction_test_collection <- lapply(reg_set, function(x) {
+        pair_collection <- list()
+        for(index in 1:length(x)) {
+            current_pair <- x[[index]]
+            pair_collection[[index]] <- grepl(current_pair[[1]], 
+                                              names(exp_data),
+                                              perl = TRUE) & 
+                grepl(current_pair[[2]], 
+                      names(exp_data),
+                      perl = TRUE)
+        }
+        
+        return(pair_collection)
+    })
+    
+    # 4. collapse the test collection so that it is a single index - any column
+    #    that had one or more matches to a test pair is an interaction column
+    interaction_matrix <- matrix(unlist(interaction_test_collection), 
+                                 ncol = length(names(exp_data)), 
+                                 byrow = TRUE)
+    
+    interaction_index <- apply(interaction_matrix, 2, any)
+    
+    # 5. get the subset of column names that match a permutation
+    interaction_col_names <- names(exp_data)[interaction_index]
+    
+    # 6. get the regex terms that will allow us to split the columns (these
+    #    may be in a funny order)
+    reg_set_matches <- apply(interaction_matrix, 1, any)
+    
+    reg_set_matrix <- matrix(unlist(reg_set), ncol = 2, byrow = T)
+    
+    split_terms <- reg_set_matrix[,2][reg_set_matches]
+    
+    # 6. pair the column names with their regex split terms (fix any order
+    #    issues)
+    # NOTE: this first step gets just the first matching position - if the same
+    #       variable is the second of multiple interaction pairs, multiple 
+    #       values will be returned; this is not an issue because of how we
+    #       do the next step
+    split_term_order <- sapply(split_terms, function (x) 
+        grep(x, interaction_col_names, perl = TRUE)[1])
+    
+    #       recreating the terms collection in the correct order (this will fill
+    #       in duplicate matches as needed)
+    split_terms <- split_terms[c(split_term_order)]
+    
+    # 7. join the terms with the col names
+    interaction_cols <- data.frame(column_name = interaction_col_names, 
+                                   split_term = split_terms,
+                                   stringsAsFactors = FALSE)
+    
+    # return the collection of names and split terms
+    return(interaction_cols)
+}
 
 # This function expands the variable configuration object to include some more
 # features, specifically those needed to define the sliders. It calculates
@@ -725,7 +1036,7 @@ apply_input_values <- function(update_target,
     } else if(use_slider_values == TRUE & use_dropdown_values == TRUE) {
         input_index <- unlist(lapply(variable_config_list, 
                                      function(x) x$slider_candidate == TRUE ||
-                                                   x$facet_candidate == TRUE))
+                                         x$facet_candidate == TRUE))
     } else {
         input_index <- unlist(lapply(variable_config_list, 
                                      function(x) x$facet_candidate == TRUE))
@@ -807,7 +1118,7 @@ apply_input_values <- function(update_target,
             for(current_col in single_col_names) {
                 update_target[current_col] <- 0
             }
-
+            
             # finally, we verify that our matching column is present in the
             # expanded data set - if it is, we update it; if it isn't, it's the
             # reference level and we stop since we have set all non-reference
@@ -846,138 +1157,6 @@ apply_input_values <- function(update_target,
     }
     
     return(update_target)
-}
-
-# We need to be able to identify columns that are the result of interactions
-# between base variables. However, the base data expansion makes it difficult
-# to recover these columns - it also expands factor levels and does not use
-# a unique separator for interaction combinations v. factor levels. This
-# function finds the possible name permutations that may result from
-# interactions and identifies columns that have matches - which will be the
-# interaction columns.
-get_interaction_col_names <- function(base_formula, exp_data) {
-    # convert the base formula into a single character string (ignoring the 
-    # outcome variable)
-    formula_string <- as.character(base_formula)[[3]]
-    
-    # parse all the separate terms (not variables but rather anything that
-    # occurs before or after a "+" symbol)
-    formula_parsed <- strsplit(formula_string, "+", fixed = TRUE)
-    
-    # get rid of any spaces (note that strsplit returns a list - we unlist to 
-    # make sure we work with a character vector)
-    formula_parsed <- gsub(" ", "", unlist(formula_parsed))
-    
-    # now we collect just those terms that have an interaction symbol "*"
-    # TODO check for : to mark interactions
-    interaction_terms <- grep("\\*|:", formula_parsed, value = TRUE)
-    
-    # quickly check to see if there are any interaction terms at all - if none
-    # we want to return "NA" so that later steps in this function don't fail
-    # and so that we can identify the lack of interaction terms correctly in
-    # later functions
-    if(length(interaction_terms) == 0) {
-        return(NA)
-    }
-    
-    # for each term, we extract the variable names
-    interaction_terms <- strsplit(interaction_terms, "\\*|:")
-    
-    # for each term, we need to construct all possible combinations of the 
-    # variable names (variable names separated by a "." and - for factor-factor
-    # interactions - possibly some other "." and text) - these are what we 
-    # will use to identity the interaction data columns in the expanded data 
-    # frame
-    # 1. get the permutations of the variable name strings
-    interaction_combos <- lapply(interaction_terms, permn)
-    # 2. build the regex search strings to test if there are column matches 
-    #    for each permutation (first term will always start the column name,
-    #    second term will always occur somewhere in the string immediately
-    #    after a period)
-    reg_set <- c()
-
-    for(combo_index in 1:length(interaction_combos)) {
-        current_combo <- interaction_combos[[combo_index]]
-        reg_combo <- list()
-        
-        for(subset_index in 1:length(current_combo)) {
-            current_subset <- current_combo[[subset_index]]
-            
-            # first pattern
-            first_pattern <- c(paste0("^", current_subset[[1]]))
-            
-            # second pattern (note that we only need to make up to the two-
-            # way match - all three-way+ matches will be matched by a two-way;
-            # also note that we match the PERIOD that occurs before the 
-            # variable name - this let's us re-use this term to split
-            # the name later on)
-            second_pattern <- paste0("\\.(?=", 
-                                     current_subset[[2]], 
-                                     "[a-zA-Z])|",
-                                     "\\.(?=", current_subset[[2]], "$)")
-            
-            reg_combo[[subset_index]] <- c(first_pattern, second_pattern)
-        }
-        
-        reg_set[[combo_index]] <- reg_combo
-    }
-      
-    # 3. test the regex pairs against the exp_data names to see which columns
-    #    are interaction columns
-    interaction_test_collection <- lapply(reg_set, function(x) {
-        pair_collection <- list()
-        for(index in 1:length(x)) {
-            current_pair <- x[[index]]
-            pair_collection[[index]] <- grepl(current_pair[[1]], 
-                                              names(exp_data),
-                                              perl = TRUE) & 
-                                        grepl(current_pair[[2]], 
-                                              names(exp_data),
-                                              perl = TRUE)
-        }
-        
-        return(pair_collection)
-    })
-    
-    # 4. collapse the test collection so that it is a single index - any column
-    #    that had one or more matches to a test pair is an interaction column
-    interaction_matrix <- matrix(unlist(interaction_test_collection), 
-                                 ncol = length(names(exp_data)), 
-                                 byrow = TRUE)
-    
-    interaction_index <- apply(interaction_matrix, 2, any)
-    
-    # 5. get the subset of column names that match a permutation
-    interaction_col_names <- names(exp_data)[interaction_index]
-    
-    # 6. get the regex terms that will allow us to split the columns (these
-    #    may be in a funny order)
-    reg_set_matches <- apply(interaction_matrix, 1, any)
-    
-    reg_set_matrix <- matrix(unlist(reg_set), ncol = 2, byrow = T)
-    
-    split_terms <- reg_set_matrix[,2][reg_set_matches]
-    
-    # 6. pair the column names with their regex split terms (fix any order
-    #    issues)
-    # NOTE: this first step gets just the first matching position - if the same
-    #       variable is the second of multiple interaction pairs, multiple 
-    #       values will be returned; this is not an issue because of how we
-    #       do the next step
-    split_term_order <- sapply(split_terms, function (x) 
-        grep(x, interaction_col_names, perl = TRUE)[1])
-    
-    #       recreating the terms collection in the correct order (this will fill
-    #       in duplicate matches as needed)
-    split_terms <- split_terms[c(split_term_order)]
-    
-    # 7. join the terms with the col names
-    interaction_cols <- data.frame(column_name = interaction_col_names, 
-                                   split_term = split_terms,
-                                   stringsAsFactors = FALSE)
-    
-    # return the collection of names and split terms
-    return(interaction_cols)
 }
 
 # We need to summarize the key details of each ribbon plot. This builds a text

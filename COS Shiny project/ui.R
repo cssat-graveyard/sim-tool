@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 5/12/2015
+# Date updated: 5/13/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
@@ -13,7 +13,7 @@
 #
 #       For the Multinomial Outcome Simulator (MOS) application, the ui.R file
 #       also handles loading any R resources needed by ui.R and server.R, along
-#       with the relevant config file (e.g., NAME_config.R) to load the base 
+#       with the relevant config file (MOS_config.R) to load the base 
 #       data, base formula, and variable configuration list needed for the MOS 
 #       application to function correctly.
 
@@ -21,6 +21,7 @@
 # - Load Supporting Packages and Scripts
 #   - ui.R is run before server.R, so it makes sense to load any resources 
 #     needed for either script here.
+#   - We also make sure Shiny uses Cairo here.
 #
 # - Load MOS Configuration Script
 #   - This it is the place where the application adminstrator defines:
@@ -32,33 +33,43 @@
 #     (d) (optional) custom visualization colors
 #     (e) (optional) custom bootstrap.css file to format the application
 #
-# - Configuration Processing
+# - Define Visualization Theme
+#   - Common ggplot theme settings are collected into a custom theme that can
+#     be layered on top of plots for a consistent look across the application.
+#
+# - Process the Variable Configuration List
 #   - Key MOS configuration features are processed so they are ready to be used 
 #     with the Shiny UI Loop and the simulation/visualization functions.
 #
 # - Shiny UI Loop
 #   - Global Application Settings
-#   - Ribbon Plot UI and Visualization
-#   - Dot Cloud Plot UI and Visualization
+#   - Ribbon Plot UI and Visualization ("Explore Mode")
+#   - Dot Cloud Plot UI and Visualization ("Single Case Mode")
 
 ###############################################################################
-## LOAD SUPPORTING LIBRARIES AND SET ANY DEFAULT OPTIONS
+## Load Supporting Packages and Scripts
+
 library(dplyr)      # serves various formatting needs
 library(shinyBS)    # expands base Shiny features (e.g., popovers)
 library(Cairo)      # supports plot quality across devices
 library(ggplot2)    # for specifying cos theme
 
+# insure that Shiny makes use of Cairo
 options(shiny.usecairo=T)
 
-source("COS sim and vis functions.R")
-source("COS custom mlogitsimev.R")
+# load the custom functions built for MOS
+source("MOS_custom_functions.R")
 
 ###############################################################################
-## CONFIGURATION SETTINGS
+## Load MOS Configuration Script
 
 source("MOS_config.R")
 
-# define visualization theme
+###############################################################################
+## Define Visualization Theme
+
+# define the visualization theme to be applied to all plots for a consistent
+# style
 cos_theme <<- theme_bw(16) +
     theme(panel.grid.minor = element_blank(), 
           panel.grid.major = element_blank(),
@@ -71,43 +82,14 @@ cos_theme <<- theme_bw(16) +
     )
 
 ###############################################################################
-## CONFIGURATION PROCESSING (AUTO-GENERATE ADDITIONAL USEFUL FEATURES)
+## Process the Variable Configuration List
 
-# extract the fixed ui options (the levels for any ui features that are
-# generated statically - such as the x-axis choices - rather than dynamically -
-# such as the sliders)
-get_fixed_ui_options <- function(variable_config_list) {
-    # collect the x-axis options names and definitions
-    x_axis_options <- c()
-    x_axis_definitions <- c()
-    for(index in 1:length(variable_config_list)) {
-        if(variable_config_list[[index]]$x_axis_candidate) {
-            current_name       <- variable_config_list[[index]]$pretty_name
-            current_def        <- variable_config_list[[index]]$definition
-            x_axis_options     <- c(x_axis_options, current_name)
-            x_axis_definitions <- c(x_axis_definitions, current_def)
-        }
-    }
-    
-    # collect the facet options names and definitions
-    facet_options <- c()
-    facet_definitions <- c()
-    for(index in 1:length(variable_config_list)) {
-        if(variable_config_list[[index]]$facet_candidate) {
-            current_name      <- variable_config_list[[index]]$pretty_name
-            current_def       <- variable_config_list[[index]]$definition
-            facet_options     <- c(facet_options, current_name)
-            facet_definitions <- c(facet_definitions, current_def)
-        }
-    }
-    
-    # return all option collections
-    list(x_axis_options     = x_axis_options, 
-         x_axis_definitions = x_axis_definitions,
-         facet_options      = facet_options,
-         facet_definitions  = facet_definitions)
-}
+# use base data to expand variable_configuration to have all values needed to 
+# define sliders
+variable_configuration <<- add_input_features(variable_configuration,
+                                              base_data)
 
+# extract the fixed UI options from the variable configuration list
 fixed_ui_options <<- get_fixed_ui_options(variable_configuration)
 
 # create a simple collection of raw = pretty name pairs (to make it easy to
@@ -119,13 +101,13 @@ raw_pretty_pairs <<- as.data.frame(raw_pretty_pairs)$pretty_name
 ## SHINY UI LOOP
 
 shinyUI(navbarPage(
-    # title of the MOS application instance
+    # global application settings
     MOS_instance_name,
     
     # set custom bootstrap.css if desired/available
     theme = custom_css,
     
-    # using COS to explore trends per predictor ("Explore Mode")
+    # using MOS to explore trends per predictor ("Explore Mode")
     tabPanel("Explore Mode", fluidPage(
         # define user tools in the first column
         # width = 3 of 12 (Shiny divides the horizontal space up into 12 sections)
@@ -173,7 +155,8 @@ shinyUI(navbarPage(
         )
     )),
     
-    # using COS to simulate outcomes for fixed predictor values ("Explore Mode")
+    # using MOS to simulate outcomes for fixed predictor values ("Single Case 
+    # Mode")
     tabPanel("Single Case Mode", fluidPage(
         # define user tools in the first column
         column(3, 

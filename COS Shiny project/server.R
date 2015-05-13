@@ -46,11 +46,6 @@
 # TESTING SETTINGS TO INCREASE STABILITY ## TEMP ##
 options(warn = -1)
 
-# use base data to expand variable_configuration to have all values needed to 
-# define sliders
-variable_configuration <<- add_input_features(variable_configuration,
-                                              base_data)
-
 # snag the outcome variable from the formula (simplifies later calls)
 outcome_variable <<- as.character(base_formula[[2]])
 
@@ -118,7 +113,7 @@ shinyServer(function(input, output, session) {
     
     # generate representative data to feed coefficients
     base_new_data <- reactive({
-        get_new_data(exp_data,
+        get_cf_cases(exp_data,
                      base_data,
                      exp_model, 
                      x_axis_raw_name(), 
@@ -185,7 +180,7 @@ shinyServer(function(input, output, session) {
     # our final simulated outcome likelihoods
     explore_likelihoods <- reactive({
         # get the unformatted summary likelihoods
-        likelihoods_raw <- mlogitsimev_med(explore_new_data(), 
+        likelihoods_raw <- MOS_mlogitsimev(explore_new_data(), 
                                            coeff_estimates, 
                                            ci = c(0.95, 0.50))
         
@@ -206,7 +201,7 @@ shinyServer(function(input, output, session) {
     # generate our final simulated outcome likelihoods
     sc_likelihoods <- reactive({
         # get single point estimates for the dot plot cloud
-        likelihoods_cloud <- mlogitsimev_med(sc_new_data(), 
+        likelihoods_cloud <- MOS_mlogitsimev(sc_new_data(), 
                                              coeff_estimates, 
                                              ci = c(0.95, 0.50),
                                              return_cloud = TRUE)
