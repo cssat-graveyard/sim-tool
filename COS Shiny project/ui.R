@@ -53,254 +53,7 @@ options(shiny.usecairo=T)
 ###############################################################################
 ## CONFIGURATION SETTINGS
 
-# the following features must be specified for every model variable that will
-# be visible to the user (as an outcome, slider, or facet)
-# variable_configuration <<- list(
-#     RAW_NAME = list(
-#         pretty_name         = UI_FRIENDLY_NAME,
-#         x_axis_candiate     = TRUE OR FALSE (WHEN APPROPRIATE, MAKE ALLOW
-#                               VARIABLE TO BE PREPARED FOR AND PRESENTED ON
-#                               PLOT X-AXIS),
-#         slider_candidate    = TRUE OR FALSE (WHEN APPROPRIATE, MAKE A SLIDER)
-#         slider_rounding     = NUMBER (E.G., 1 WILL FORCE THE SLIDER TO SNAP TO
-#                               WHOLE NUMBERS AS IT IS BEING MOVED); DEFAULTS TO
-#                               0.1 IF NA,
-#         facet_candidate     = TRUE OR FALSE (WHEN APPROPRIATE, ALLOW FACET - 
-#                               WILL FORCE VARIABLE TO FACTOR),
-#         transform_for_ui    = USE "identity" AS DEFAULT; BUT IF VARIABLE NEEDS
-#                               TO BE TRANSFORMED FOR USER PRESENTATION, DEFINE
-#                               THE TRANSFORM FUNCTION HERE,
-#         transform_for_model = USE "identity" AS DEFAULT; SPECIFY FUNCTION
-#                               IF UI INPUT NEEDS TO BE TRANSFORMED BACK BEFORE
-#                               USED IN THE MODEL,
-#     ),
-#     ...
-# )
-variable_configuration <<- list(   
-    mist_scores = list(
-        pretty_name         = "Engagement: Parent Trusts Case Worker",
-        definition          = paste0("Parental belief that the agency or ", 
-                                     "worker is sincere, honest, or ",
-                                     "well-intentioned, with intent to help ",
-                                     "the client."),
-        ribbon_plot_summary = paste0("There is a positive association between ",
-                                     "this index of parental trust and ",
-                                     "Reunification: the likelihood that ",
-                                     "simulated cases end in Reunification ",
-                                     "increases as the trust index increases.",
-                                     "<br><br>The likelihood of both Adoption ",
-                                     "and Guardianship declines as the trust ",
-                                     "index increases. The likelihood of ",
-                                     "Emancipation (very unlikely) remains ",
-                                     "stable at all index levels."),
-        annotation          = c("<- less trust", "more trust ->"),
-        annotation1         = c("very low", "low", "moderate", "high", "very high"),
-        x_axis_candidate    = TRUE,
-        slider_candidate    = TRUE,
-        slider_rounding     = 1,
-        facet_candidate     = FALSE,
-        transform_for_ui    = function(x) abs(x - 3),
-        transform_for_model = function(x) -(x) + 3
-    ),    
-    wrkg_scores = list(
-        pretty_name         = paste0("Engagement: Working Relationship ",
-                                     "Between Parent and Case Worker"),
-        definition          = paste0("Parental perception of the ",
-                                     "interpersonal relationship with worker ",
-                                     "characterized by a sense of reciprocity ",
-                                     "or mutuality and good communication."),
-        ribbon_plot_summary = paste0("There is a positive, but weak, ",
-                                     "association between this index of the ",
-                                     "parent--agent relationship and ",
-                                     "Reunification: the likelihood that ",
-                                     "simulated cases end in Reunification ",
-                                     "slightly increases as the relationshp ",
-                                     "index increases.<br><br>The likelihood ",
-                                     "of Adoption declines as the ",
-                                     "relationship index increases. The ",
-                                     "likelihood of Guardianship (fairly ",
-                                     "unlikely) and Emancipation (very ",
-                                     "unlikely) remain stable all index ",
-                                     "levels."),
-        annotation          = c("<- worse relationship", "better relationship ->"),
-        x_axis_candidate    = TRUE,    
-        slider_candidate    = TRUE,
-        slider_rounding     = 1,
-        facet_candidate     = FALSE,
-        transform_for_ui    = function(x) x + 3,
-        transform_for_model = function(x) x - 3
-    ),   
-    recep_scores = list(
-        pretty_name         = "Engagement: Parent Receptivity",
-        definition          = paste0("Parental openness to receiving help, ",
-                                     "characterized by recognition of ", 
-                                     "problems or circumstances that resulted ",
-                                     "in agency intervention and by a ",
-                                     "perceived need for help."),
-        ribbon_plot_summary = paste0("The association between this index of ",
-                                     "parent receptivity and the case ",
-                                     "outcomes is very weak. In other words, ",
-                                     "this index - at least by itself - is ",
-                                     "has little effect on the likelihood of ",
-                                     "simulated case outcomes."),
-        annotation          = c("<- less receptivity", "more receptivity ->"),
-        x_axis_candidate    = TRUE,
-        slider_candidate    = TRUE,
-        slider_rounding     = 1,
-        facet_candidate     = FALSE,
-        transform_for_ui    = function(x) x + 3,
-        transform_for_model = function(x) x - 3
-    ),    
-    buyn_scores = list(
-        pretty_name         = "Engagement: Parent Buy-In",
-        definition          = paste0("Parental perception of benefit; a sense ",
-                                     "of being helped or the expectation of ",
-                                     "receiving help through the agency ",
-                                     "involvement; a feeling that things are ",
-                                     "changing (or will change) for the ",
-                                     "better. Also includes a commitment to ",
-                                     "the helping process, characterized by ",
-                                     "active participation in planning or ",
-                                     "services, goal ownership, and ",
-                                     "initiative in seeking and using help."),
-        ribbon_plot_summary = paste0("There is a positive association between ",
-                                     "this index of parental ",
-                                     "commitment/participation and ",
-                                     "Reunification: the likelihood that ",
-                                     "simulated cases end in Reunification ",
-                                     "increases as the buy-in index increases.",
-                                     "<br><br>The likelihood of Guardianship ",
-                                     "decreases as the buy-in index ",
-                                     "increases.The likelihood of Adoption ",
-                                     "(moderately likely) and Emancipation ",
-                                     "(very unlikely) remain stable."),
-        annotation          = c("<- less buy-in", "more buy-in ->"),
-        x_axis_candidate    = TRUE,
-        slider_candidate    = TRUE,
-        slider_rounding     = 1,
-        facet_candidate     = FALSE,
-        transform_for_ui    = function(x) x + 3,
-        transform_for_model = function(x) x - 3
-    ),    
-    log_age_eps_begin = list(
-        pretty_name         = "Child Age at Episode Begin",
-        definition          = paste0("The age of the child (in years) as of ",
-                                     "the start of their placement in ",
-                                     "out-of-home care."),
-        ribbon_plot_summary = paste0("There is a high likelihood that ",
-                                     "simulated cases end in Reunification if ",
-                                     "the case starts when the child about 2 ",
-                                     "to 12 years of age.<br><br>Prior to the ",
-                                     "second year, Adoption is also fairly ",
-                                     "likely - but it declines steeply from 0 ",
-                                     "to 5 years and then stabilizes until ",
-                                     "about 10 to 12 years.<br><br>The ",
-                                     "likelihood that simulated cases end in ",
-                                     "Guardianship slowly increases ",
-                                     "(complimenting the decline in Adoption) ",
-                                     "until about 12 years.<br><br>At 10 to ",
-                                     "12 years, Reunification, Adoption, and ",
-                                     "Guardianship become rapidly less likely ",
-                                     "as child age increases. Instead, ",
-                                     "Emancipation becomes increasingly ",
-                                     "likely. By 13 to 15 years of age, it is ",
-                                     "the most likely outcome for simulated ",
-                                     "cases."),
-        annotation          = NULL,
-        x_axis_candidate    = TRUE,
-        slider_candidate    = TRUE,
-        slider_rounding     = 1,
-        facet_candidate     = FALSE,
-        transform_for_ui    = function(x) exp(x) - 1,
-        transform_for_model = log1p
-    ),  
-    housing_hs_cnt = list(
-        pretty_name         = "Count of Housing Hardships",
-        definition          = paste0("The count of affirmative responses to ",
-                                     "survey questions concerning housing ",
-                                     "hardships (e.g. difficulty paying rent, ",
-                                     "couch-surfing, etc.)."),
-        ribbon_plot_summary = paste0("There is a strong negative assocation ",
-                                     "between this index of housing hardships ",
-                                     "and Reunification: the likelihood that ",
-                                     "simulated cases end in Reunification ",
-                                     "decreases as the housing hardship index ",
-                                     "increases.<br><br>The likelihood of ",
-                                     "Adoption increases as the housing ",
-                                     "hardship index increases. Guardianship ",
-                                     "(unlikely) and Emancipation (very ",
-                                     "unlikely) remain stable at all index ",
-                                     "levels."),
-        annotation          = NULL,
-        x_axis_candidate    = TRUE,
-        slider_candidate    = TRUE,
-        slider_rounding     = 1,
-        facet_candidate     = FALSE,
-        transform_for_ui    = identity,
-        transform_for_model = identity
-    ),   
-    REG = list(
-        pretty_name         = "Administrative Region",
-        definition          = paste0("An indicator of the administrative ",
-                                     "region of the child welfare case."),
-        ribbon_plot_summary = paste0(""),
-        annotation          = NULL,
-        x_axis_candidate    = FALSE,
-        slider_candidate    = FALSE,
-        slider_rounding     = NA,
-        facet_candidate     = TRUE,
-        transform_for_ui    = identity,
-        transform_for_model = identity
-    ),
-    employ = list(
-        pretty_name         = "Parental Employment Status",
-        definition          = paste0("An indicator as to whether or not the ",
-                                     "parent reported full or part-time ",
-                                     "employment."),
-        ribbon_plot_summary = paste0(""),
-        annotation          = NULL,
-        x_axis_candidate    = FALSE,
-        slider_candidate    = FALSE,
-        slider_rounding     = NA,
-        facet_candidate     = TRUE,
-        transform_for_ui    = identity,
-        transform_for_model = identity
-    ),
-    sm_coll = list(
-        pretty_name         = "Parental Education Level",
-        definition          = paste0("An indicator as to whether or not the ",
-                                     "parent reported any education beyond ",
-                                     "high-school."),
-        ribbon_plot_summary = paste0(""),
-        annotation          = NULL,
-        x_axis_candidate    = FALSE,
-        slider_candidate    = FALSE,
-        slider_rounding     = NA,
-        facet_candidate     = TRUE,
-        transform_for_ui    = identity,
-        transform_for_model = identity
-    ),
-    high_in = list(
-        pretty_name         = "Parental Income Status",
-        definition          = paste0("An indicator as to whether or not the ",
-                                     "reported parental income is less than ",
-                                     "(or equal to) 10,000 dollars."),
-        ribbon_plot_summary = paste0(""),
-        annotation          = NULL,
-        x_axis_candidate    = FALSE,
-        slider_candidate    = FALSE,
-        slider_rounding     = NA,
-        facet_candidate     = TRUE,
-        transform_for_ui    = identity,
-        transform_for_model = identity
-    )
-)
-
-# provide the POC colors for use in plots, UI, etc.
-poc_colors    <<- c("#3B6E8F", "#A2B69A", "#A3DCE6", "#A784B4")
-portal_colors <<- c("#D9BB32", "#6DB33F", "#6E9CAE", "#B1662B", "#5B8067", 
-                    "#444D3E", "#994D3E", "#10475B", "#7D6E86", "#D47079", 
-                    "#262F1D", "#B0B0B0")
+source("MOS_config.R")
 
 # define visualization theme
 cos_theme <<- theme_bw(16) +
@@ -363,11 +116,11 @@ raw_pretty_pairs <<- as.data.frame(raw_pretty_pairs)$pretty_name
 ## SHINY UI LOOP
 
 shinyUI(navbarPage(
-    # title of entire proejct
-    "The Case Outcome Simulator",
-    # CSS theme for entire project (current theme from here:
-    # https://bootswatch.com/sandstone/)
-    theme = "bootstrap.css",
+    # title of the MOS application instance
+    MOS_instance_name,
+    
+    # set custom bootstrap.css if desired/available
+    theme = custom_css,
     
     # using COS to explore trends per predictor ("Explore Mode")
     tabPanel("Explore Mode", fluidPage(
@@ -468,8 +221,6 @@ shinyUI(navbarPage(
         
         # define the visualization in the second column
         column(9,
-               #                plotOutput("error_bar_plot"),
-               
                plotOutput("dot_cloud_plot"),
                
                wellPanel(
@@ -485,8 +236,6 @@ shinyUI(navbarPage(
                    p("The final graph gives us a sense of which outcomes tend ",
                      "to be more likely and how much uncertainty there is in ",
                      "the simulation."),
-                   p("The simulation is modeled on real data collected from ",
-                     "a limited selection of Washington State welfare data."),
                    strong("What Is This Simulation Based On?"),
                    p("The simulation is modeled on real data collected from ",
                      "a limited selection of Washington State welfare data.")
