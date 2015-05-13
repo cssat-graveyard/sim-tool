@@ -2,7 +2,7 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/25/2015
-# Date updated: 5/5/2015
+# Date updated: 5/12/2015
 
 # NOTE: Functions were largely developed in the "gator model example V3.R"
 #       script. That script was archived to allow us to seperate the model
@@ -1001,4 +1001,4 @@ build_ribbon_summary <- function(x_axis_raw_name, variable_config_list) {
 
 ###############################################################################
 ## END OF SCRIPT
-###############################################################################                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+###############################################################################

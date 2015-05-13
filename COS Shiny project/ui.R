@@ -2,33 +2,44 @@
 # Contact: bwaismeyer@gmail.com
 
 # Date created: 3/23/2015
-# Date updated: 5/5/2015
+# Date updated: 5/12/2015
 
 ###############################################################################
 ## SCRIPT OVERVIEW
 
-# goal: This is a core Shiny project file. It defines the user interface
-#       for the Sim Tool prototype - including which data objects are visible,
-#       where they are visible, and how they can be interacted with (if
-#       at all.)
-
-# sketch of script
-# - Load Supporting Libraries
-#   - anything that might fail if the script needs to wait for server.R to load
+# GOAL: ui.R is a core Shiny project file that defines and arranges the 
+#       interface features for interacting with Shiny data objects (defined
+#       in server.R).
 #
-# - Configuration Settings
-#   - where the admin defines the roles of the model variables and some other
-#     basic information
-#   - also provide the POC color scheme to be called during plot creation
+#       For the Multinomial Outcome Simulator (MOS) application, the ui.R file
+#       also handles loading any R resources needed by ui.R and server.R, along
+#       with the relevant config file (e.g., NAME_config.R) to load the base 
+#       data, base formula, and variable configuration list needed for the MOS 
+#       application to function correctly.
+
+# SCRIPT OUTLINE:
+# - Load Supporting Packages and Scripts
+#   - ui.R is run before server.R, so it makes sense to load any resources 
+#     needed for either script here.
+#
+# - Load MOS Configuration Script
+#   - This it is the place where the application adminstrator defines:
+#     (a) what data will be used by the MOS
+#     (b) the formula relating predictor attributes to the outcome attribute
+#     (c) which variables will be visible in the UI, how they can be 
+#         interacted with (slider or facet), and how they should be
+#         understood by users
+#     (d) (optional) custom visualization colors
+#     (e) (optional) custom bootstrap.css file to format the application
 #
 # - Configuration Processing
-#   - the provided settings are processed so they are ready to be used with
-#     the Shiny UI Loop and the simulation/visualization functions
+#   - Key MOS configuration features are processed so they are ready to be used 
+#     with the Shiny UI Loop and the simulation/visualization functions.
 #
 # - Shiny UI Loop
-#   - page settings
-#   - define the user tools
-#   - define the visualization
+#   - Global Application Settings
+#   - Ribbon Plot UI and Visualization
+#   - Dot Cloud Plot UI and Visualization
 
 ###############################################################################
 ## LOAD SUPPORTING LIBRARIES AND SET ANY DEFAULT OPTIONS
