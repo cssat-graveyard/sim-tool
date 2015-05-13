@@ -39,11 +39,6 @@
 #   - feed the new data to the simulated coefficients (get prediction object)
 #   - generate the visualization based on user input and the prediction object
 
-###############################################################################
-## SOURCE THE SUPPORTING SIMULATION/VISUALIZATION SCRIPTS
-
-source("COS sim and vis functions.R")
-source("COS custom mlogitsimev.R")
 
 ###############################################################################
 ## PREPARE BASE DATA FOR SIMULATION/VISUALIZATION (EXPANSION, STATIC FEATURES)

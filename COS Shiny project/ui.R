@@ -50,6 +50,9 @@ library(ggplot2)    # for specifying cos theme
 
 options(shiny.usecairo=T)
 
+source("COS sim and vis functions.R")
+source("COS custom mlogitsimev.R")
+
 ###############################################################################
 ## CONFIGURATION SETTINGS
 
@@ -131,37 +134,10 @@ shinyUI(navbarPage(
                    radioButtons("x_axis_choice", label = h4("Select X-Axis"), 
                                 choices = fixed_ui_options$x_axis_options),
                    
-#                    bsPopover("x_axis_choice",
-#                              title = "Variable Definitions",
-#                              content = paste(
-#                                  "<strong>",
-#                                  fixed_ui_options$x_axis_options,
-#                                  "</strong>",
-#                                  "<br>",
-#                                  fixed_ui_options$x_axis_definitions,
-#                                  "<br><br>"),
-#                              trigger = "hover",
-#                              placement = "right",
-#                              options = list(container = "body")),
-                   
                    radioButtons("facet_choice", 
                                 label = h4("Compare By..."),
                                 choices = c("None", 
                                             fixed_ui_options$facet_options))
-                   
-#                    bsPopover("facet_choice", 
-#                              title = "Variable Definitions",
-#                              content = paste(
-#                                  "<strong>",
-#                                  fixed_ui_options$facet_options,
-#                                  "</strong>",
-#                                  "<br>",
-#                                  fixed_ui_options$facet_definitions,
-#                                  "<br><br>"),
-#                              trigger = "hover",
-#                              placement = "right",
-#                              options = list(container = "body"))
-                   
                ),
                
                wellPanel( 
@@ -192,13 +168,7 @@ shinyUI(navbarPage(
                
                wellPanel(
                    uiOutput("ribbon_text"),
-                   br(),
-                   strong("Please Keep In Mind"),
-                   p("Our simulation cannot tell if the observed ",
-                     "relationships are causal or correlational."),
-                   strong("What Is This Simulation Based On?"),
-                   p("The simulation is modeled on real data collected from ",
-                     "a limited selection of Washington State welfare data.")
+                   HTML(ribbon_addendum)
                )
         )
     )),
@@ -224,21 +194,7 @@ shinyUI(navbarPage(
                plotOutput("dot_cloud_plot"),
                
                wellPanel(
-                   strong("What Does This Graph Show Us?"),
-                   p("Each time the 'SIMULATE' button is clicked, 1000 child ",
-                     "welfare cases are simulated for the values you set the ",
-                     "sliders to."),
-                   p("For each case, we get an estimate of how likely the ",
-                     "four outcomes are. We plot every estimate by its ",
-                     "outcome."),
-                   p("So, there are 1000 points by each outcome - one for ",
-                     "every simulated case."),
-                   p("The final graph gives us a sense of which outcomes tend ",
-                     "to be more likely and how much uncertainty there is in ",
-                     "the simulation."),
-                   strong("What Is This Simulation Based On?"),
-                   p("The simulation is modeled on real data collected from ",
-                     "a limited selection of Washington State welfare data.")
+                   HTML(dot_cloud_addendum)
                )
         )
     ))

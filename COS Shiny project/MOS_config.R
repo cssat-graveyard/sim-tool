@@ -61,6 +61,14 @@
 #     application titled "www".
 #   - Assign the name of bootstrap.css file to the character string 
 #     "custom_css".
+#
+# - Ribbon Plot Addendum (Optional)
+#   - If you want to provide any additional text (e.g., caveats, general
+#     context) beneath the ribbon plot text body, you can assign an HTML-
+#     formatted string to "ribbon_addendum". Set this variable to NULL if
+#     you don't want to add anything.
+#
+# - Dot Cloud Plot Addendum (Optional)
 
 ###############################################################################
 ## Name the Application Instance
@@ -374,6 +382,64 @@ custom_outcome_colors <- c("#D9BB32", "#6DB33F", "#6E9CAE", "#B1662B",
 custom_css = "bootstrap.css"
 # CSS theme for entire project (current theme from here:
 # https://bootswatch.com/sandstone/)
+
+###############################################################################
+## Ribbon Plot Addendum (Optional)
+
+# This needs to be an HTML formatted string. It will immediately begin adding
+# text after the auto-generated ribbon plot text (variable name, definition,
+# and key trends) - you will need to add line breaks where needed. Set to NULL
+# if you don't want any added text.
+ribbon_addendum <- 
+    paste0("<br><strong>Please Keep In Mind</strong>",
+           
+           "<br>Our simulation cannot tell if the observed relationships are",
+           "causal or correlational.",
+           
+           "<br><br><strong>What Is This Simulation Based On?</strong>",
+           
+           "<br>The simulation is modeled on real data: a survey of child ",
+           "welfare-involved parents performed in 2008 by Partners for Our ",
+           "Children and linked to administrative data from Children's ",
+           "Administration.",
+           
+           "<br><br>The data is of limited scope, it includes only cases ",
+           "where the child was removed with an active dependency petition ",
+           "and entered care in 2008 in Washington State.")
+
+###############################################################################
+## Dot Cloud Plot Addendum (Optional)
+
+# No text is automatically created for the dot cloud plot. A default 
+# explanation of the plot is provided below, but you may want to adjust
+# the language to be appropriate for the application instance and audience. Set
+# to NULL if you simply want the this are to be blank.
+dot_cloud_addendum <- 
+    paste0("<strong>What Does This Graph Show Us?</strong>",
+           
+           "<br>Each time the 'SIMULATE' button is clicked, 1000 child ",
+           "welfare cases are simulated for the values you set the sliders to.",
+           
+           "<br><br>For each case, we get an estimate of how likely the four ",
+           "outcomes are. We plot every estimate by its outcome.",
+           
+           "<br><br>So, there are 1000 points by each outcome - one for every ",
+           "simulated case.",
+           
+           "<br><br>The resulting graph gives us a sense of which outcomes ",
+           "tend to be more likely and how much uncertainty there is in the ",
+           "simulation.",
+           
+           "<br><br><strong>What Is This Simulation Based On?</strong>",
+           
+           "<br>The simulation is modeled on real data: a survey of child ",
+           "welfare-involved parents performed in 2008 by Partners for Our ",
+           "Children and linked to administrative data from Children's ",
+           "Administration.",
+           
+           "<br><br>The data is of limited scope, it includes only cases ",
+           "where the child was removed with an active dependency petition ",
+           "and entered care in 2008 in Washington State.")
 
 ###############################################################################
 ## END OF SCRIPT
