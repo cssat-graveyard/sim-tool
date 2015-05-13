@@ -390,7 +390,7 @@ custom_css = "bootstrap.css"
 # text after the auto-generated ribbon plot text (variable name, definition,
 # and key trends) - you will need to add line breaks where needed. Set to NULL
 # if you don't want any added text.
-ribbon_addendum <- NULL
+ribbon_addendum <-
     paste0("<br><strong>Please Keep In Mind</strong>",
            
            "<br>Our simulation cannot tell if the observed relationships are",
@@ -410,6 +410,7 @@ ribbon_addendum <- NULL
 ###############################################################################
 ## Dot Cloud Plot Addendum (Optional)
 
+# Like "ribbon_addendum", this also needs to be an HTML formatted string.
 # No text is automatically created for the dot cloud plot. A default 
 # explanation of the plot is provided below, but you may want to adjust
 # the language to be appropriate for the application instance and audience. Set

@@ -618,7 +618,7 @@ get_ribbon_plot <- function(formatted_likelihoods,
                            expand = c(0, 0)) +
         scale_x_continuous(expand = c(0, 0)) +
         # theme adjustments
-        cos_theme +
+        MOS_theme +
         guides(fill = guide_legend(title = NULL))
     
     # if x-axis annotations are provided, add these to an appropriate place
@@ -677,7 +677,7 @@ get_dot_cloud_plot <- function(formatted_likelihoods,
         scale_y_continuous(limits = c(0, 1),
                            labels = scales::percent) +
         # theme adjustments
-        cos_theme +
+        MOS_theme +
         theme(legend.position="none") +
         coord_flip()
     

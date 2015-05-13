@@ -70,7 +70,7 @@ source("MOS_config.R")
 
 # define the visualization theme to be applied to all plots for a consistent
 # style
-cos_theme <<- theme_bw(16) +
+MOS_theme <<- theme_bw(16) +
     theme(panel.grid.minor = element_blank(), 
           panel.grid.major = element_blank(),
           strip.text = element_text(color = "white"),
@@ -84,8 +84,8 @@ cos_theme <<- theme_bw(16) +
 ###############################################################################
 ## Process the Variable Configuration List
 
-# use base data to expand variable_configuration to have all values needed to 
-# define sliders
+# use base data to expand variable_configuration to have all features/values 
+# needed to define user inputs
 variable_configuration <<- add_input_features(variable_configuration,
                                               base_data)
 
@@ -133,7 +133,7 @@ shinyUI(navbarPage(
                        # only show if the "Advanced Options" box is ticked
                        condition = "input.slider_show == true",
                        
-                       actionButton("update_explore_data",
+                       actionButton("update_explore_cf_cases",
                                     "Update Plot"),
                        br(),
                        br(),
@@ -163,7 +163,7 @@ shinyUI(navbarPage(
                wellPanel(
                    helpText(h4("Case Values")),
                    
-                   actionButton("update_sc_data",
+                   actionButton("update_sc_cf_cases",
                                 "Simulate"),
                    br(),
                    br(),

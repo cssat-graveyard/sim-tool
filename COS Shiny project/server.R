@@ -7,41 +7,50 @@
 ###############################################################################
 ## SCRIPT OVERVIEW
 
-# goal: This is a core Shiny project file. It defines the creation of the
-#       data objects that the user interface will display and allow interaction
-#       with.
+# GOAL: server.R is a core Shiny project file that generates and manages data
+#       objects and user interactions with these objects. The user-facing
+#       displays of these data objects and the points of interaction are
+#       arranged in ui.R.
 #
-#       Supporting libraries, data imports, etc., all happen here. For the 
-#       SimTool prototype, the majority of the work is handled by custom 
-#       functions (loaded, along with supporting libraries, by R scripts 
-#       named below).
-
-# sketch of script
-# - source the scripts providing the functions to create the visualization
-#   from the model and data
-
-# - user specification required: source and select base data object, define
-#   the base data model
+#       For the Multinomial Outcome Simulator (MOS) application, the server.R
+#       file handles the processing of a given model formula and data to
+#       generate outcome-likelihood visualizations, along with the variety
+#       of intermediate products needed to get those visualizations.
 #
-# - build any static objects needed for simulation/visualization
-#   - we need to "spread" the factors and interactions in a second data frame  
+#       NOTE: Because ui.R is run before server.R, this application has been 
+#       designed so that all resources needed for server.R are loaded in ui.R.
+#
+# SCRIPT OUTLINE:
+# - Server Initialization (Steps That Don't Need To Be Reactive)
+#   - Anything placed in this section will be processed only the when the server
+#     is initialized. It is the place to define the point MOS users should
+#     start from when they connect to the application.
+#   - We need to "spread" the factors and interactions in a second data frame  
 #     so they are handled properly; this also results in an expanded model
-#     formula matching the "spread" data frame
-#   - the first data frame is retained for factor/level information, the second
-#     is the data frame we will use for the model fitting and simulation
-#   - create all simulation objects except the new data, the predictions
-#     summary object, and the visualization
+#     formula matching the "spread" data frame.
+#   - The first data frame is retained for factor/level information, the second
+#     is the data frame we will use for the model fitting and simulation.
+#   - We identify interaction columns in the expanded data.
+#   - We re-sample the model coefficients many times to get a set of estimates
+#     of these coefficients. This is the set that we will pass our
+#     counterfactual cases through.
 #
-# - define the shinyServer loop to turn the data objects into Shiny's output
-#   objects (and define any desired interactivty)
-#   - collect user inputs
-#   - generate the new data based on user input
-#   - feed the new data to the simulated coefficients (get prediction object)
-#   - generate the visualization based on user input and the prediction object
-
+# - shinyServer Loop (Steps That Do Need To Be Reactive)
+#   - This is where the bulk of the action takes place - it handles all of the
+#     simulation steps that need to be responsive to user input, all of the
+#     visualization steps, and also contributes to the creation of dynamic
+#     parts of the UI. It proceeds roughly as follows:
+#   - Collect user inputs.
+#   - Update the dynamic parts of the UI.
+#   - Create the base counterfactual case set.
+#   - Update the counterfactual case set based on user inputs.
+#   - Pass the counterfactual cases through the sampled coefficients to get
+#     outcome likelihoods for each case.
+#   - Generate the visualizations of the outcome likelihoods for the
+#     counterfactual cases.
 
 ###############################################################################
-## PREPARE BASE DATA FOR SIMULATION/VISUALIZATION (EXPANSION, STATIC FEATURES)
+## Server Initialization (Steps That Don't Need To Be Reactive)
 
 # TESTING SETTINGS TO INCREASE STABILITY ## TEMP ##
 options(warn = -1)
@@ -69,10 +78,10 @@ coeff_estimates <<- get_coefficient_estimates(1000, point_estimates,
                                               cov_matrix, exp_model)
 
 ###############################################################################
-## DEFINE THE OBJECTS FOR THE UI TO DISPLAY
+## shinyServer Loop (Steps That Do Need To Be Reactive)
 
 shinyServer(function(input, output, session) {
-    # create fixed user inputs
+    ## Collect user inputs.
     # all are reactive objects so that updates to these can be relied on to
     # update any dependencies
     x_axis_raw_name <- reactive({
@@ -96,6 +105,7 @@ shinyServer(function(input, output, session) {
         }
     })
     
+    ## Update the dynamic parts of the UI.
     # generate the sliders for the "Explore Mode"
     output$explore_input_set <- renderUI({
         make_inputs(variable_config_list = variable_configuration,
@@ -111,8 +121,8 @@ shinyServer(function(input, output, session) {
                     facet_as_dropdown = TRUE)
     })
     
-    # generate representative data to feed coefficients
-    base_new_data <- reactive({
+    ## Create the base counterfactual case set.
+    base_cf_cases <- reactive({
         get_cf_cases(exp_data,
                      base_data,
                      exp_model, 
@@ -121,10 +131,11 @@ shinyServer(function(input, output, session) {
                      interaction_col_names = interaction_cols)
     })
     
-    # generate counterfactual data for the "Explore Mode" visualizations
-    explore_new_data <- reactive({
+    ## Update the counterfactual case set based on user inputs.
+    # update for the "Explore Mode" visualizations
+    explore_cf_cases <- reactive({
         # establish the reactive link to the "Update" button
-        input$update_explore_data
+        input$update_explore_cf_cases
         
         # this next section only gets evaluated if the "Show sliders?" option is
         # set to TRUE - in that case, the slider values should be used to 
@@ -135,12 +146,12 @@ shinyServer(function(input, output, session) {
         #       1. the "Update Plot" button is visible and is pressed, updating 
         #          the data with slider values
         #       2. a new x-axis is selected (refreshes the plots that use
-        #          explore_new_data() and resets the sliders if they are 
+        #          explore_cf_cases() and resets the sliders if they are 
         #          visible)
         if(isolate(input$slider_show)) {
             # note that the update_target here is allowed to be reactive
             # to create a reactive link when the sliders are visible
-            apply_input_values(update_target = base_new_data(), 
+            apply_input_values(update_target = base_cf_cases(), 
                                interaction_col_names = interaction_cols,
                                variable_config_list = variable_configuration,
                                input_call = isolate(input),               
@@ -151,21 +162,20 @@ shinyServer(function(input, output, session) {
                                variables_to_drop = isolate(x_axis_raw_name()))
         } else {
             # reactive link for when the sliders are hidden
-            return(base_new_data())
+            return(base_cf_cases())
         }
     })
     
-    # generate counterfactual data for the "Single Case" visualizations
-    sc_new_data <- reactive({        
+    # update for the "Single Case" visualizations
+    sc_cf_cases <- reactive({        
         # establish the reactive link to the "Update" button
-        #input$update_sc_data
-        input$update_sc_data
+        input$update_sc_cf_cases
         
         # make the sliders
         # NOTE: there is only a single reactive pathway here - the "update_sc_
-        #       data" input must be triggered - this insures that the
+        #       cf_cases" input must be triggered - this insures that the
         #       visualization chain is only triggered on user request        
-        apply_input_values(update_target = isolate(base_new_data()), 
+        apply_input_values(update_target = isolate(base_cf_cases()), 
                            interaction_col_names = interaction_cols,
                            variable_config_list = variable_configuration,
                            input_call = isolate(input),               
@@ -176,11 +186,13 @@ shinyServer(function(input, output, session) {
                            variables_to_drop = NA)
     })
     
-    # feed the representative data to the sampled coefficients to generate
-    # our final simulated outcome likelihoods
+    ## Pass the counterfactual cases through the sampled coefficients to get
+    ## outcome likelihoods for each case.
+    # get the "Explore Mode" likelihoods (note that these are actually 
+    # summaries of the many likelihood sets generated for each case)
     explore_likelihoods <- reactive({
         # get the unformatted summary likelihoods
-        likelihoods_raw <- MOS_mlogitsimev(explore_new_data(), 
+        likelihoods_raw <- MOS_mlogitsimev(explore_cf_cases(), 
                                            coeff_estimates, 
                                            ci = c(0.95, 0.50))
         
@@ -188,20 +200,21 @@ shinyServer(function(input, output, session) {
         ribbon_ready <- format_for_ribbon_plot(likelihoods_raw,
                                                exp_model,
                                                base_data,
-                                               isolate(explore_new_data()),
+                                               isolate(explore_cf_cases()),
                                                isolate(x_axis_raw_name()),
-                                               facet_selected = isolate(facet_raw_name())
+                                               facet_selected = 
+                                                   isolate(facet_raw_name())
         )
         
         # return the formatted object
         return(ribbon_ready)
     })
     
-    # single case: feed the representative data to the sampled coefficients to 
-    # generate our final simulated outcome likelihoods
+    # get the "Single Case Mode" likelihoods (note that here we retain all the
+    # likelihood sets for each case - we don't summarize them)
     sc_likelihoods <- reactive({
         # get single point estimates for the dot plot cloud
-        likelihoods_cloud <- MOS_mlogitsimev(sc_new_data(), 
+        likelihoods_cloud <- MOS_mlogitsimev(sc_cf_cases(), 
                                              coeff_estimates, 
                                              ci = c(0.95, 0.50),
                                              return_cloud = TRUE)
@@ -217,7 +230,9 @@ shinyServer(function(input, output, session) {
         return(dotplot_ready)
     })
     
-    # visualize the outcome likelihoods (ribbon plot)
+    ## Generate the visualizations of the outcome likelihoods for the
+    ## counterfactual cases.
+    # "Explore Mode" ribbon plot
     output$ribbon_plot <- renderPlot({
         # isolate the x_axis_variable name and its associated transform_for_ui
         x_axis_var <- isolate(x_axis_raw_name())
@@ -226,7 +241,8 @@ shinyServer(function(input, output, session) {
         # apply the transform to the predictor column in explore_likelihoods to 
         # make it ui friendly
         ribbon_likelihoods <- explore_likelihoods()
-        ribbon_likelihoods$predictor <- ui_transform(ribbon_likelihoods$predictor)
+        ribbon_likelihoods$predictor <- 
+            ui_transform(ribbon_likelihoods$predictor)
         
         # draw the plot
         get_ribbon_plot(ribbon_likelihoods, 
@@ -234,8 +250,10 @@ shinyServer(function(input, output, session) {
                         y_lab = "Simulated Probability", 
                         x_lab = isolate(input$x_axis_choice),
                         custom_colors = custom_outcome_colors,
-                        isolate(variable_configuration[[x_axis_var]]$annotation),
-                        isolate(variable_configuration[[x_axis_var]]$annotation1)
+                        isolate(
+                            variable_configuration[[x_axis_var]]$annotation),
+                        isolate(
+                            variable_configuration[[x_axis_var]]$annotation1)
         )
     })
     
@@ -244,7 +262,7 @@ shinyServer(function(input, output, session) {
         build_ribbon_summary(x_axis_raw_name(), variable_configuration)
     })
     
-    # visualize the outcome likelihoods (dot cloud plot)
+    # "Single Case Mode" dot cloud plot
     output$dot_cloud_plot <- renderPlot({
         # draw the plot
         get_dot_cloud_plot(sc_likelihoods(),
